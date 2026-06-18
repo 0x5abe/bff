@@ -7,6 +7,7 @@ use bff::bigfile::BigFile;
 use bff::bigfile::platforms::Platform;
 use bff::bigfile::resource::{BffClass, Resource};
 use bff::bigfile::versions::Version;
+use bff::names::NameContext;
 use bff::traits::{Artifact, Import, TryIntoVersionPlatform};
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -14,6 +15,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use crate::error::BffCliResult;
 use crate::extract::write_names;
 
+#[allow(clippy::too_many_arguments)]
 pub fn create(
     directory: &Path,
     bigfile_path: &Path,
@@ -23,11 +25,12 @@ pub fn create(
     version_to_write: &Option<Version>,
     tag: &Option<String>,
 ) -> BffCliResult<()> {
+    let name_context = NameContext::default();
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_message("Reading manifest");
     let manifest_path = directory.join("manifest.json");
     let manifest_reader = BufReader::new(File::open(manifest_path)?);
-    let manifest = serde_json::from_reader(manifest_reader)?;
+    let manifest = bff::names::json::from_reader(manifest_reader, &name_context)?;
 
     let mut bigfile = BigFile {
         manifest,
@@ -47,7 +50,7 @@ pub fn create(
             progress_bar.inc(1);
             if path.is_file() {
                 let mut file_reader = BufReader::new(File::open(&path)?);
-                let resource = Resource::read_bff_resource(&mut file_reader)?;
+                let resource = Resource::read_bff_resource(&mut file_reader, &name_context)?;
                 if resources.contains_key(&resource.name) {
                     return Err(crate::error::BffCliError::DuplicateResource {
                         name: resource.name,
@@ -60,7 +63,8 @@ pub fn create(
                 let resource_serialized_path = directory.join("resource.json");
                 let resource_serialized_reader =
                     BufReader::new(File::open(resource_serialized_path)?);
-                let mut bff_class: BffClass = serde_json::from_reader(resource_serialized_reader)?;
+                let mut bff_class: BffClass =
+                    bff::names::json::from_reader(resource_serialized_reader, &name_context)?;
 
                 let mut artifacts = HashMap::new();
 
@@ -80,6 +84,11 @@ pub fn create(
                                 let name = path.file_stem().unwrap().to_os_string();
                                 let bytes = std::fs::read(path)?;
                                 artifacts.insert(name, Artifact::Dds(bytes));
+                            }
+                            "wav" => {
+                                let name = path.file_stem().unwrap().to_os_string();
+                                let bytes = std::fs::read(path)?;
+                                artifacts.insert(name, Artifact::Wav(bytes));
                             }
                             "txt" => {
                                 let name = path.file_stem().unwrap().to_os_string();
@@ -135,12 +144,17 @@ pub fn create(
         version_override,
         version_to_write,
         tag.as_deref(),
+        &name_context,
     )?;
 
     progress_bar.set_message("Writing names");
 
     if let Some(out_names) = out_names {
-        write_names(out_names, &Some(bigfile.resources.keys().collect()))?;
+        write_names(
+            out_names,
+            &Some(bigfile.resources.keys().collect()),
+            &name_context,
+        )?;
     }
 
     progress_bar.finish_and_clear();

@@ -1,7 +1,4 @@
-use bff_derive::ReferencedNames;
 use binrw::{BinRead, BinResult, BinWrite};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::class::trivial_class::TrivialClass;
 use crate::helpers::{
@@ -37,25 +34,14 @@ fn parse_character() -> BinResult<char> {
         .unwrap())
 }
 
-#[derive(
-    BinRead,
-    Debug,
-    Serialize,
-    BinWrite,
-    Deserialize,
-    ReferencedNames,
-    PartialEq,
-    Eq,
-    Hash,
-    JsonSchema,
-)]
+#[derive(..BffStruct, PartialEq, Eq, Hash)]
 struct CharacterID(
     #[br(parse_with = parse_character)]
     #[bw(write_with = write_character)]
     char,
 );
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct Character {
     material_index: u32,
     descent: f32,
@@ -63,7 +49,7 @@ struct Character {
     bottom_right_corner: Vec2f,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &ResourceObjectLinkHeaderV1_381_67_09PC))]
 pub struct FontsBodyV1_381_67_09PC {
     characters: BffMap<CharacterID, Character>,
@@ -77,7 +63,7 @@ impl Export for FontsV1_381_67_09PC {}
 impl Import for FontsV1_381_67_09PC {}
 
 // TODO: Shouldn't need to duplicate this just because the link header type is different
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &ResourceObjectLinkHeaderV1_06_63_02PC))]
 pub struct FontsBodyV1_06_63_02PC {
     characters: BffMap<CharacterID, Character>,

@@ -3,7 +3,8 @@
 BigFile Friend
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/widberg/bff/build.yml)](https://github.com/widberg/bff/actions)
-[![Release Nightly](https://img.shields.io/badge/release-nightly-5e025f?labelColor=301934)](https://nightly.link/widberg/bff/workflows/build/master)
+[![GitHub Release](https://img.shields.io/github/v/release/widberg/bff?include_prereleases&sort=semver&display_name=release)](https://github.com/widberg/bff/releases)
+[![Release Nightly](https://img.shields.io/badge/release-nightly-5e025f?labelColor=301934)](https://github.com/widberg/bff/releases/tag/nightly)
 [![Join the chat at https://discord.gg/CQgMNbYeUR](https://img.shields.io/badge/chat-on_discord-7389D8.svg?logo=discord&logoColor=ffffff&labelColor=6A7EC2)](https://discord.gg/CQgMNbYeUR)
 
 The Zouna Swiss Army knife. Originally named BigFile Friend for Zouna's resource archives, it now supports far more than just BigFiles.
@@ -63,7 +64,7 @@ A ✔ indicates that the format has been tested and is working. An ❌ indicates
 | psc    | ✔      |
 | CPS    | ✔      |
 
-These formats from Black Sheep Studios games also use the csc cypher and therefore work with the csc command. They aren't actually TSCs, but they are text based configuration formats, so I'll include them here.
+These formats from Black Sheep Studios games also use the CSC cipher and therefore work with the `crypt`/`uncrypt` commands using `--algorithm csc`. They aren't actually TSCs, but they are text based configuration formats, so I'll include them here.
 
 | Format | Status |
 |--------|--------|
@@ -75,7 +76,7 @@ This format is from The Mighty Quest for Epic Loot. Again, it's not actually a T
 
 | Format          | Status |
 |-----------------|--------|
-| settings.bin    | ❌     |
+| settings.bin    | ✔      |
 
 ### Audio
 
@@ -108,25 +109,31 @@ Ahmed Khaled's [`ratatouille_converter.py`](https://gist.github.com/widberg/2abb
 
 ## Getting Started
 
-### Prerequisites
+### Install Release
 
-* [Rust](https://www.rust-lang.org/)
+Stable versioned releases can be found on the [Releases page](https://github.com/widberg/bff/releases).
 
-### Checkout
+### Install Nightly
+
+If you want the latest bug fixes and improvements, use the [nightly release](https://github.com/widberg/bff/releases/tag/nightly).
+
+### Build from Source
+
+#### Checkout
 
 ```sh
 git clone https://github.com/widberg/bff.git
 cd bff
 ```
 
-### Build
+#### Build
 
 ```sh
 cargo build --release
 ```
 
-### Test
+#### Test
 
 ```sh
-RUST_TEST_THREADS=1 cargo +nightly test --release -j 1
+cargo +nightly test --release
 ```

@@ -1,0 +1,89 @@
+use crate::helpers::{
+    KeyframerBezierRot,
+    KeyframerFloatComp,
+    KeyframerMessage,
+    KeyframerRot,
+    KeyframerVec3fComp,
+};
+use crate::names::Name;
+
+#[derive(..BffStruct)]
+pub struct AnimationNode {
+    pub unknown: u16,
+    pub keyframer_rot: KeyframerRot,
+    pub keyframer_bezier_rot: KeyframerBezierRot,
+    pub keyframer_scale: KeyframerVec3fComp,
+    pub keyframer_translation: KeyframerVec3fComp,
+    pub keyframer_message: KeyframerMessage,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationNodeModifier {
+    pub bone_name: Name,
+    pub bone_id: u16,
+    pub flag: u16,
+    pub translation_start_frame: u16,
+    pub translation_frame_count: u16,
+    pub rot_start_frame: u16,
+    pub rot_frame_count: u16,
+    pub bezier_start_frame: u16,
+    pub bezier_frame_count: u16,
+    pub scale_start_frame: u16,
+    pub scale_frame_count: u16,
+    pub message_start_frame: u16,
+    pub message_frame_count: u16,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMaterial {
+    pub keyframer_float_comp0: KeyframerFloatComp,
+    pub keyframer_float_comp1: KeyframerFloatComp,
+    pub keyframer_vec3_comp0: KeyframerVec3fComp,
+    pub keyframer_vec3_comp1: KeyframerVec3fComp,
+    pub keyframer_float_comp2: KeyframerFloatComp,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMaterialModifier {
+    pub material_link_name: Name,
+    pub material_id: u16,
+    pub flag: u16,
+    pub keyframer_float_comp0_start_frame: u16,
+    pub keyframer_float_comp0_frame_count: u16,
+    pub keyframer_float_comp1_start_frame: u16,
+    pub keyframer_float_comp1_frame_count: u16,
+    pub keyframer_vec3_comp0_start_frame: u16,
+    pub keyframer_vec3_comp0_frame_count: u16,
+    pub keyframer_vec3_comp1_start_frame: u16,
+    pub keyframer_vec3_comp1_frame_count: u16,
+    pub keyframer_float_comp2_start_frame: u16,
+    pub keyframer_float_comp2_frame_count: u16,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMesh {
+    pub keyframer_float_comp: KeyframerFloatComp,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMeshModifier {
+    pub mesh_link_name: Name,
+    pub mesh_id: u16,
+    pub flag: u16,
+    pub keyframer_float_comp_start_frame: u16,
+    pub keyframer_float_comp_frame_count: u16,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMorph {
+    pub keyframer_float_comp: KeyframerFloatComp,
+}
+
+#[derive(..BffStruct)]
+pub struct AnimationMorphModifier {
+    pub mesh_link_name: Name,
+    pub mesh_id: u16,
+    pub flag: u16,
+    pub keyframer_float_comp_start_frame: u16,
+    pub keyframer_float_comp_frame_count: u16,
+}

@@ -1,8 +1,6 @@
 use bff_derive::ReferencedNames;
 use bilge::prelude::*;
 use binrw::{BinRead, BinWrite};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::class::trivial_class::TrivialClass;
 use crate::helpers::{
@@ -20,7 +18,7 @@ use crate::traits::{Export, Import};
 
 #[bitsize(32)]
 #[derive(
-    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchema,
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
 )]
 struct ParticlesEmitterFlags {
     fl_particles_loop: u1,
@@ -42,7 +40,7 @@ struct ParticlesEmitterFlags {
     padding: u16,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct ParticlesEmitter {
     max_quantity: u16,
     p_cloud_type: u16,
@@ -70,7 +68,7 @@ struct ParticlesEmitter {
     material_anim_name: Name,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &ObjectLinkHeaderV1_381_67_09PC))]
 pub struct ParticlesBodyV1_381_67_09PC {
     particles_emitters: DynArray<ParticlesEmitter>,

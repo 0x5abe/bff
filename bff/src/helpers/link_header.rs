@@ -2,30 +2,19 @@ use bff_derive::ReferencedNames;
 use bilge::prelude::*;
 use binrw::helpers::until_eof;
 use binrw::{BinRead, BinWrite};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use super::{BffBox, DynArray, Sphere};
 use crate::names::Name;
-use crate::traits::TryFromGenericSubstitute;
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 pub struct ResourceObjectLinkHeaderV1_381_67_09PC {
     #[referenced_names(skip)]
     link_name: Name,
 }
 
-// this is just silly. i'm sure there's a better way
-impl TryFromGenericSubstitute<Self, Self> for ResourceObjectLinkHeaderV1_381_67_09PC {
-    type Error = crate::error::Error;
-    fn try_from_generic_substitute(generic: Self, _: Self) -> Result<Self, Self::Error> {
-        Ok(generic)
-    }
-}
-
 #[bitsize(32)]
 #[derive(
-    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchema,
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
 )]
 pub struct ObjectDatasFlagsV1_381_67_09PC {
     hide: u1,
@@ -40,8 +29,26 @@ pub struct ObjectDatasFlagsV1_381_67_09PC {
     vp1_hide: u1,
     vp2_hide: u1,
     vp3_hide: u1,
-    last: u1,
-    padding: u19,
+    unknown13: u1,
+    unknown14: u1,
+    unknown15: u1,
+    unknown16: u1,
+    unknown17: u1,
+    unknown18: u1,
+    unknown19: u1,
+    unknown20: u1,
+    unknown21: u1,
+    unknown22: u1,
+    unknown23: u1,
+    unknown24: u1,
+    unknown25: u1,
+    unknown26: u1,
+    unknown27: u1,
+    unknown28: u1,
+    unknown29: u1,
+    unknown30: u1,
+    unknown31: u1,
+    unknown32: u1,
 }
 
 #[bitsize(32)]
@@ -53,7 +60,7 @@ pub struct ObjectDatasFlagsV1_381_67_09PC {
     BinWrite,
     DeserializeBits,
     ReferencedNames,
-    JsonSchema,
+    JsonSchemaBits,
 )]
 pub struct ObjectFlagsV1_381_67_09PC {
     init: u1,
@@ -72,11 +79,25 @@ pub struct ObjectFlagsV1_381_67_09PC {
     light_baked_with_material: u1,
     shadow_receiver: u1,
     no_tesselate: u1,
-    last: u1,
-    padding: u15,
+    unknown17: u1,
+    unknown18: u1,
+    unknown19: u1,
+    unknown20: u1,
+    unknown21: u1,
+    unknown22: u1,
+    unknown23: u1,
+    unknown24: u1,
+    unknown25: u1,
+    unknown26: u1,
+    unknown27: u1,
+    unknown28: u1,
+    unknown29: u1,
+    unknown30: u1,
+    unknown31: u1,
+    unknown32: u1,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[brw(repr = u16)]
 pub enum ObjectType {
     Points = 0,
@@ -107,7 +128,7 @@ pub enum ObjectType {
     WorldRef = 26,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 pub struct ObjectLinkHeaderV1_381_67_09PC {
     #[referenced_names(skip)]
     link_name: Name,
@@ -119,7 +140,7 @@ pub struct ObjectLinkHeaderV1_381_67_09PC {
     r#type: ObjectType,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 pub struct ResourceObjectLinkHeaderV1_06_63_02PC {
     #[referenced_names(skip)]
     link_name: Name,
@@ -128,15 +149,7 @@ pub struct ResourceObjectLinkHeaderV1_06_63_02PC {
     links: Vec<u8>,
 }
 
-// this is just silly. i'm sure there's a better way
-impl TryFromGenericSubstitute<Self, Self> for ResourceObjectLinkHeaderV1_06_63_02PC {
-    type Error = crate::error::Error;
-    fn try_from_generic_substitute(generic: Self, _: Self) -> Result<Self, Self::Error> {
-        Ok(generic)
-    }
-}
-
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 pub struct ObjectLinkHeaderV1_06_63_02PC {
     #[referenced_names(skip)]
     link_name: Name,
@@ -147,166 +160,4 @@ pub struct ObjectLinkHeaderV1_06_63_02PC {
     fade_out_dist: f32,
     pub flags: u32,
     r#type: ObjectType,
-}
-
-pub struct ResourceObjectLinkHeaderGeneric {
-    pub link_name: Name,
-    pub names: DynArray<Name>,
-    pub links: Vec<u8>,
-}
-
-impl From<ResourceObjectLinkHeaderV1_381_67_09PC> for ResourceObjectLinkHeaderGeneric {
-    fn from(header: ResourceObjectLinkHeaderV1_381_67_09PC) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: vec![].into(),
-            links: vec![],
-        }
-    }
-}
-
-impl From<ResourceObjectLinkHeaderV1_06_63_02PC> for ResourceObjectLinkHeaderGeneric {
-    fn from(header: ResourceObjectLinkHeaderV1_06_63_02PC) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: header.names,
-            links: header.links,
-        }
-    }
-}
-
-impl From<ResourceObjectLinkHeaderGeneric> for ResourceObjectLinkHeaderV1_381_67_09PC {
-    fn from(header: ResourceObjectLinkHeaderGeneric) -> Self {
-        Self {
-            link_name: header.link_name,
-        }
-    }
-}
-
-impl From<ResourceObjectLinkHeaderGeneric> for ResourceObjectLinkHeaderV1_06_63_02PC {
-    fn from(header: ResourceObjectLinkHeaderGeneric) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: header.names,
-            links: header.links,
-        }
-    }
-}
-
-impl TryFromGenericSubstitute<ResourceObjectLinkHeaderGeneric, Self>
-    for ResourceObjectLinkHeaderV1_06_63_02PC
-{
-    type Error = crate::error::Error;
-
-    fn try_from_generic_substitute(
-        generic: ResourceObjectLinkHeaderGeneric,
-        _: Self,
-    ) -> Result<Self, Self::Error> {
-        Ok(generic.into())
-    }
-}
-
-impl TryFromGenericSubstitute<ResourceObjectLinkHeaderGeneric, Self>
-    for ResourceObjectLinkHeaderV1_381_67_09PC
-{
-    type Error = crate::error::Error;
-
-    fn try_from_generic_substitute(
-        generic: ResourceObjectLinkHeaderGeneric,
-        _: Self,
-    ) -> Result<Self, Self::Error> {
-        Ok(generic.into())
-    }
-}
-
-pub struct ObjectLinkHeaderGeneric {
-    pub link_name: Name,
-    pub names: DynArray<Name>,
-    pub data_name: Name,
-    pub b_sphere: Sphere,
-    pub b_box: BffBox,
-    pub fade_out_dist: f32,
-    pub flags: u32,
-    pub r#type: ObjectType,
-}
-
-impl From<ObjectLinkHeaderV1_381_67_09PC> for ObjectLinkHeaderGeneric {
-    fn from(header: ObjectLinkHeaderV1_381_67_09PC) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: vec![].into(),
-            data_name: header.data_name,
-            b_sphere: header.b_sphere,
-            b_box: header.b_box,
-            fade_out_dist: header.fade_out_dist,
-            flags: header.flags.value,
-            r#type: header.r#type,
-        }
-    }
-}
-
-impl From<ObjectLinkHeaderV1_06_63_02PC> for ObjectLinkHeaderGeneric {
-    fn from(header: ObjectLinkHeaderV1_06_63_02PC) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: header.names,
-            data_name: header.data_name,
-            b_sphere: header.b_sphere,
-            b_box: header.b_box,
-            fade_out_dist: header.fade_out_dist,
-            flags: header.flags,
-            r#type: header.r#type,
-        }
-    }
-}
-
-impl From<ObjectLinkHeaderGeneric> for ObjectLinkHeaderV1_381_67_09PC {
-    fn from(header: ObjectLinkHeaderGeneric) -> Self {
-        Self {
-            link_name: header.link_name,
-            data_name: header.data_name,
-            b_sphere: header.b_sphere,
-            b_box: header.b_box,
-            fade_out_dist: header.fade_out_dist,
-            flags: ObjectFlagsV1_381_67_09PC::from(header.flags),
-            r#type: header.r#type,
-        }
-    }
-}
-
-impl From<ObjectLinkHeaderGeneric> for ObjectLinkHeaderV1_06_63_02PC {
-    fn from(header: ObjectLinkHeaderGeneric) -> Self {
-        Self {
-            link_name: header.link_name,
-            names: header.names,
-            data_name: header.data_name,
-            b_sphere: header.b_sphere,
-            b_box: header.b_box,
-            fade_out_dist: header.fade_out_dist,
-            flags: header.flags,
-            r#type: header.r#type,
-        }
-    }
-}
-
-impl TryFromGenericSubstitute<ObjectLinkHeaderGeneric, Self> for ObjectLinkHeaderV1_06_63_02PC {
-    type Error = crate::error::Error;
-
-    fn try_from_generic_substitute(
-        generic: ObjectLinkHeaderGeneric,
-        _: Self,
-    ) -> Result<Self, Self::Error> {
-        Ok(generic.into())
-    }
-}
-
-impl TryFromGenericSubstitute<ObjectLinkHeaderGeneric, Self> for ObjectLinkHeaderV1_381_67_09PC {
-    type Error = crate::error::Error;
-
-    fn try_from_generic_substitute(
-        generic: ObjectLinkHeaderGeneric,
-        _: Self,
-    ) -> Result<Self, Self::Error> {
-        Ok(generic.into())
-    }
 }

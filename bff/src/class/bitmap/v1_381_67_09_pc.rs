@@ -2,42 +2,23 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::io::Cursor;
 
-use bff_derive::{GenericClass, ReferencedNames};
 use binrw::helpers::until_eof;
-use binrw::{BinRead, BinWrite};
-use ddsfile::{D3DFormat, Dds, NewD3dParams};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use ddsfile::{Caps2, D3DFormat, Dds, NewD3dParams};
 
-use super::generic::BitmapGeneric;
 use crate::BffResult;
 use crate::class::trivial_class::TrivialClass;
 use crate::error::Error;
-use crate::macros::trivial_class_generic::trivial_class_generic;
 use crate::names::Name;
 use crate::traits::{Artifact, Export, Import};
 
-#[derive(
-    BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames, Copy, Clone,
-)]
+#[derive(..BffStruct, Copy, Clone)]
 #[brw(repr = u16)]
 enum BitmapClass {
     Single = 0,
     Cubemap = 2,
 }
 
-#[derive(
-    BinRead,
-    Debug,
-    Serialize,
-    BinWrite,
-    Deserialize,
-    ReferencedNames,
-    Copy,
-    Clone,
-    Default,
-    JsonSchema,
-)]
+#[derive(..BffStruct, Copy, Clone, Default)]
 #[brw(repr = u8)]
 enum BmFormat {
     #[default]
@@ -47,18 +28,14 @@ enum BmFormat {
     BmDxt5 = 16,
 }
 
-#[derive(
-    BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames, Copy, Clone,
-)]
+#[derive(..BffStruct, Copy, Clone)]
 #[brw(repr = u8)]
 enum BitmapClass2 {
     Cubemap2 = 0,
     Single2 = 3,
 }
 
-#[derive(
-    BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames, Copy, Clone,
-)]
+#[derive(..BffStruct, Copy, Clone)]
 #[brw(repr = u8)]
 enum BmTransp {
     NoTransp = 0,
@@ -67,21 +44,15 @@ enum BmTransp {
     Cubemap = 255,
 }
 
-#[derive(
-    BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames, GenericClass,
-)]
-#[generic(name(BitmapHeaderGeneric))]
+#[derive(..BffStruct)]
 pub struct LinkHeader {
     #[referenced_names(skip)]
     link_name: Name,
     bitmap_class: BitmapClass,
-    #[generic]
     #[serde(skip)]
     width: u32,
-    #[generic]
     #[serde(skip)]
     height: u32,
-    #[generic]
     #[serde(skip)]
     precalculated_size: u32,
     flags: u8,
@@ -90,7 +61,6 @@ pub struct LinkHeader {
     layer: f32,
     #[serde(skip)]
     format0: BmFormat,
-    #[generic]
     #[serde(skip)]
     mipmap_count: u8,
     four: u8,
@@ -100,20 +70,15 @@ pub struct LinkHeader {
     transparency: BmTransp,
 }
 
-#[derive(
-    Debug, BinRead, BinWrite, Serialize, Deserialize, ReferencedNames, GenericClass, JsonSchema,
-)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &LinkHeader))]
 pub struct BitmapBodyV1_381_67_09PC {
     #[br(parse_with = until_eof)]
     #[serde(skip)]
-    #[generic]
     data: Vec<u8>,
 }
 
 pub type BitmapV1_381_67_09PC = TrivialClass<LinkHeader, BitmapBodyV1_381_67_09PC>;
-
-trivial_class_generic!(BitmapV1_381_67_09PC, BitmapGeneric);
 
 impl TryFrom<BmFormat> for D3DFormat {
     type Error = Error;
@@ -143,13 +108,15 @@ impl TryFrom<D3DFormat> for BmFormat {
 
 impl Export for BitmapV1_381_67_09PC {
     fn export(&self) -> BffResult<HashMap<OsString, Artifact>> {
+        let caps2 = matches!(self.link_header.bitmap_class, BitmapClass::Cubemap)
+            .then_some(Caps2::CUBEMAP | Caps2::CUBEMAP_ALLFACES);
         let mut dds = Dds::new_d3d(NewD3dParams {
             height: self.link_header.height,
             width: self.link_header.width,
-            depth: None,
-            format: self.link_header.format0.try_into()?,
-            mipmap_levels: Some(self.link_header.mipmap_count as u32),
-            caps2: None,
+            depth: Some(1),
+            format: self.link_header.format1.try_into()?,
+            mipmap_levels: Some(u32::from(self.link_header.mipmap_count).saturating_add(1)),
+            caps2,
         })
         .unwrap();
         dds.data = self.body.data.clone();
@@ -170,12 +137,24 @@ impl Import for BitmapV1_381_67_09PC {
         };
         let dds_reader = Cursor::new(data);
         let dds = Dds::read(dds_reader).map_err(|_| Error::ImportBadArtifact)?;
+        let format = dds
+            .get_d3d_format()
+            .ok_or(Error::UnimplementedImportExport)?
+            .try_into()?;
         self.link_header.width = dds.get_width();
         self.link_header.height = dds.get_height();
-        self.link_header.precalculated_size = dds.data.len() as u32;
-        self.link_header.mipmap_count = dds.get_num_mipmap_levels() as u8;
-        self.link_header.format0 = dds.get_d3d_format().unwrap().try_into()?;
-        self.link_header.format1 = dds.get_d3d_format().unwrap().try_into()?;
+        self.link_header.precalculated_size = match format {
+            BmFormat::BmA8l8 => 0,
+            _ => dds.data.len() as u32,
+        };
+        let mip_map_count = dds.header.mip_map_count.unwrap_or(1);
+        self.link_header.mipmap_count = mip_map_count.saturating_sub(1).min(u32::from(u8::MAX)) as u8;
+        self.link_header.format0 = if dds.header.caps2.contains(Caps2::CUBEMAP) {
+            BmFormat::BmMultipleBitmaps
+        } else {
+            format
+        };
+        self.link_header.format1 = format;
         self.body.data = dds.data;
         Ok(())
     }
