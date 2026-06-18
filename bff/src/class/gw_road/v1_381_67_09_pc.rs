@@ -38,7 +38,7 @@ enum SubType {
 
 #[bitsize(8)]
 #[derive(
-    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchema,
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
 )]
 struct RoadType {
     sub_type: SubType,
@@ -66,6 +66,10 @@ impl BinRead for EncodedPoint {
             // 01 23 45 67 89
             // \_____/\_____/
             //    x      y
+            // It would be nice to use arbitrary-int's i20 type for this with bilge, but that
+            // complicates the BinRead/BinWrite implementation due to needing to read/write a u40.
+            // I could do something with a 5 byte array but it seems like more effort than it's
+            // worth.
             (a >> 12) as f32 / 4.,
             (((a << 20) >> 12) | b as i32) as f32 / 4.,
         ]))
@@ -92,13 +96,13 @@ impl BinWrite for EncodedPoint {
     }
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct Road {
     r#type: RoadType,
     points: DynArray<EncodedPoint, u16>,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct Unused5 {
     unused0: u32,
     unused1: u32,
@@ -112,7 +116,7 @@ struct Unused5 {
     unused8s: Vec<u32>,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &ResourceObjectLinkHeaderV1_381_67_09PC))]
 pub struct GwRoadBodyV1_381_67_09PC {
     road_count: u32,

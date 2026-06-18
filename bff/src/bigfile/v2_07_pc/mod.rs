@@ -44,7 +44,7 @@ fn parse_blocks<const GAME: usize>(
     decompressed_block_size: u32,
     block_sizes: &[u32],
 ) -> BinResult<Vec<Block>> {
-    let mut blocks = Vec::new();
+    let mut blocks = Vec::with_capacity(block_sizes.len());
 
     for block_size in block_sizes {
         let block_start = reader.stream_position()?;
@@ -185,7 +185,7 @@ impl<const GAME: usize> BigFileIo for BigFileV2_07PC<GAME> {
 
         let mut decompressed_block_size = 0;
 
-        let mut blocks = Vec::new();
+        let mut blocks = Vec::with_capacity(bigfile.manifest.blocks.len());
 
         for block in bigfile.manifest.blocks.iter() {
             let mut block_writer = Cursor::new(Vec::new());
@@ -208,19 +208,20 @@ impl<const GAME: usize> BigFileIo for BigFileV2_07PC<GAME> {
         }
 
         decompressed_block_size = calculated_padded(decompressed_block_size as usize, 2048) as u32;
-        let mut block_sizes = Vec::new();
+        let mut block_sizes = Vec::with_capacity(blocks.len());
         let mut compression_type = CompressionType::None;
 
         for (resource_count, _, compressed, mut block_data) in blocks {
             let block_begin = writer.stream_position()?;
+            let block_payload_size = decompressed_block_size.saturating_sub(4);
 
             resource_count.write_options(writer, endian, ())?;
 
-            block_data.resize(decompressed_block_size as usize, 0);
+            block_data.resize(block_payload_size as usize, 0);
 
             if compressed {
-                // FIXME: Compressed data isn't a 1-to-1 match but round trips correctly?
-                // Some size is probably off somewhere. Or the version of minilzo is wrong.
+                // TODO: Compressed data isn't a 1-to-1 match but round trips correctly?
+                // I bet the version of minilzo is wrong.
                 compression_type = CompressionType::Lzo;
                 lzo_compress(&block_data, writer)?;
             } else {
@@ -231,19 +232,12 @@ impl<const GAME: usize> BigFileIo for BigFileV2_07PC<GAME> {
 
             write_align_to(writer, 2048, 0)?;
 
-            block_sizes.push(
-                (block_end
-                    - block_begin
-                    - if compressed {
-                        match GAME {
-                            SHAUN_PROTO => 0,
-                            SHAUN => 4,
-                            _ => unreachable!(),
-                        }
-                    } else {
-                        0
-                    }) as u32,
-            );
+            block_sizes.push(match (compressed, GAME) {
+                (false, _) => (block_end - block_begin) as u32,
+                (true, SHAUN) => (block_end - block_begin) as u32,
+                (true, SHAUN_PROTO) => (block_end - block_begin - 4) as u32,
+                (_, _) => unreachable!(),
+            });
         }
 
         // Write header at the beginning of the file and restore position
@@ -269,6 +263,5 @@ impl<const GAME: usize> BigFileIo for BigFileV2_07PC<GAME> {
 
     const NAME_TYPE: NameType = BlackSheep32;
 
-    // FIXME: I'm not convinced this is correct, see the other v2_X BF
     type ResourceType = Resource;
 }

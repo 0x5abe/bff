@@ -3,11 +3,13 @@ use std::borrow::Cow;
 use binrw::{BinRead, BinWrite};
 use derive_more::{Display, From};
 use scanf::sscanf;
-use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
+use schemars::schema::Schema;
+use schemars::{JsonSchema, SchemaGenerator};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_context::context_scope;
 
 use crate::helpers::PascalString;
-use crate::names::names;
+use crate::names::{DeserializeNamesContext, SerializeNamesContext};
 
 #[derive(Debug, Display, Clone, Eq, PartialEq, BinRead, BinWrite)]
 pub enum Version {
@@ -135,6 +137,13 @@ impl From<&str> for Version {
 
 impl Serialize for Version {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if let Ok(name_type) = self.try_into() {
+            context_scope(|cx| {
+                if let Ok(names_context) = cx.get::<SerializeNamesContext>() {
+                    names_context.set_name_type(name_type);
+                }
+            });
+        }
         serializer.serialize_str(&self.to_string())
     }
 }
@@ -143,17 +152,23 @@ impl<'de> Deserialize<'de> for Version {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let string = String::deserialize(deserializer)?;
         let version: Self = string.as_str().into();
-        names().lock().unwrap().name_type = (&version).try_into().unwrap(); // FIXME: name_type should not exist
+        if let Ok(name_type) = (&version).try_into() {
+            context_scope(|cx| {
+                if let Ok(names_context) = cx.get::<DeserializeNamesContext>() {
+                    names_context.set_name_type(name_type);
+                }
+            });
+        }
         Ok(version)
     }
 }
 
 impl JsonSchema for Version {
-    fn inline_schema() -> bool {
+    fn is_referenceable() -> bool {
         true
     }
 
-    fn schema_name() -> Cow<'static, str> {
+    fn schema_name() -> std::string::String {
         "Version".into()
     }
 
@@ -161,14 +176,12 @@ impl JsonSchema for Version {
         concat!(module_path!(), "::Version").into()
     }
 
-    fn json_schema(_schema_generator: &mut SchemaGenerator) -> Schema {
-        json_schema!({
-            "type": "string"
-        })
+    fn json_schema(schema_generator: &mut SchemaGenerator) -> Schema {
+        String::json_schema(schema_generator)
     }
 }
 
-#[derive(Debug, Clone, Copy, BinRead, BinWrite, Serialize, Deserialize, JsonSchema, From)]
+#[derive(..BffStruct, Clone, Copy, From, Eq, PartialEq)]
 #[serde(untagged)]
 pub enum VersionXple {
     Oneple(VersionOneple),

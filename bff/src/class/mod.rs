@@ -1,231 +1,245 @@
-use self::anim_frame::AnimFrame;
-use self::animation::Animation;
-use self::animation_graph::AnimationGraph;
-use self::animation_graph_override::AnimationGraphOverride;
-use self::area_light::AreaLight;
-use self::binary::Binary;
-use self::bitmap::Bitmap;
-use self::camera::Camera;
-use self::camera_zone::CameraZone;
-use self::collision_vol::CollisionVol;
-use self::collision_vol_data::CollisionVolData;
-use self::conductor::Conductor;
-use self::decal::Decal;
-use self::dialog_event::DialogEvent;
-use self::entity::Entity;
-use self::flare::Flare;
-use self::flare_data::FlareData;
-use self::fog_volume::FogVolume;
-use self::fonts::Fonts;
-use self::fx_particles::FxParticles;
-use self::fx_particles_data::FxParticlesData;
-use self::game_obj::GameObj;
-use self::gen_world::GenWorld;
-use self::graph::Graph;
-use self::gw_road::GwRoad;
-use self::h_fog::HFog;
-use self::h_fog_data::HFogData;
-use self::hull_spline_zone::HullSplineZone;
-use self::light::Light;
-use self::light_data::LightData;
-use self::light_probe_volume::LightProbeVolume;
-use self::lod::Lod;
-use self::lod_data::LodData;
-use self::mass_instancing_volume::MassInstancingVolume;
-use self::material::Material;
-use self::material_anim::MaterialAnim;
-use self::material_collect::MaterialCollect;
-use self::material_obj::MaterialObj;
-use self::mesh::Mesh;
-use self::mesh_data::MeshData;
-use self::net_bing_obj::NetBingObj;
-use self::node::Node;
-use self::occluder::Occluder;
-use self::omni::Omni;
-use self::omni_data::OmniData;
-use self::r#override::Override;
-use self::particles::Particles;
-use self::particles_data::ParticlesData;
-use self::prefab::Prefab;
-use self::prefab_ref::PrefabRef;
-use self::reflection_probe::ReflectionProbe;
-use self::rot_shape::RotShape;
-use self::rot_shape_data::RotShapeData;
-use self::rtc::Rtc;
-use self::shader::Shader;
-use self::skel::Skel;
-use self::skin::Skin;
-use self::skin_data::SkinData;
-use self::sound::Sound;
-use self::sound_event::SoundEvent;
-use self::special_effect_node::SpecialEffectNode;
-use self::spline::Spline;
-use self::spline_graph::SplineGraph;
-use self::spline_zone::SplineZone;
-use self::surface::Surface;
-use self::surface_datas::SurfaceDatas;
-use self::terrain::Terrain;
-use self::texture::Texture;
-use self::txt::Txt;
-use self::user_define::UserDefine;
-use self::user_define_script::UserDefineScript;
-use self::warp::Warp;
-use self::world::World;
-use self::world_ref::WorldRef;
-use self::x_ref_node::XRefNode;
 use crate::macros::classes::classes;
 
-pub mod anim_frame;
-pub mod animation;
-pub mod animation_graph;
-pub mod animation_graph_override;
-pub mod area_light;
-pub mod binary;
-pub mod bitmap;
-pub mod camera;
-pub mod camera_zone;
-pub mod collision_vol;
-pub mod collision_vol_data;
-pub mod conductor;
-pub mod decal;
-pub mod dialog_event;
-pub mod entity;
-pub mod flare;
-pub mod flare_data;
-pub mod fog_volume;
-pub mod fonts;
-pub mod fx_particles;
-pub mod fx_particles_data;
-pub mod game_obj;
-pub mod gen_world;
-pub mod graph;
-pub mod gw_road;
-pub mod h_fog;
-pub mod h_fog_data;
-pub mod hull_spline_zone;
-pub mod light;
-pub mod light_data;
-pub mod light_probe_volume;
-pub mod lod;
-pub mod lod_data;
-pub mod mass_instancing_volume;
-pub mod material;
-pub mod material_anim;
-pub mod material_collect;
-pub mod material_obj;
-pub mod mesh;
-pub mod mesh_data;
-pub mod net_bing_obj;
-pub mod node;
-pub mod occluder;
-pub mod omni;
-pub mod omni_data;
-pub mod r#override;
-pub mod particles;
-pub mod particles_data;
-pub mod prefab;
-pub mod prefab_ref;
-pub mod reflection_probe;
-pub mod rot_shape;
-pub mod rot_shape_data;
-pub mod rtc;
-pub mod shader;
-pub mod skel;
-pub mod skin;
-pub mod skin_data;
-pub mod sound;
-pub mod sound_event;
-pub mod special_effect_node;
-pub mod spline;
-pub mod spline_graph;
-pub mod spline_zone;
-pub mod surface;
-pub mod surface_datas;
-pub mod terrain;
-pub mod texture;
 pub mod trivial_class;
-pub mod txt;
-pub mod user_define;
-pub mod user_define_script;
-pub mod warp;
-pub mod world;
-pub mod world_ref;
-pub mod x_ref_node;
 
 classes! {
-    Animation,
+    AIObstacleCollection,
+    AIObjectCollection,
+    AmbientLightmap,
+    Animation {
+        (Asobo(1, 6..=291, _, _), PC) => v1_291_03_06_pc::AnimationV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::AnimationV1_381_67_09PC,
+        ;
+        pub mod shared;
+    },
+    AnimationCollection,
     AnimationGraph,
     AnimationGraphOverride,
+    AnimationStack,
     AnimFrame,
     AreaLight,
-    Binary,
-    Bitmap,
-    Camera,
-    CameraZone,
-    CollisionVol,
+    Binary {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::BinaryV1_381_67_09PC,
+    },
+    Bitmap {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::BitmapV1_06_63_02PC,
+        (Asobo(1, 231..=291, _, _), _) => v1_291_03_06_pc::BitmapV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::BitmapV1_381_67_09PC,
+    },
+    Camera {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::CameraV1_381_67_09PC,
+    },
+    CameraZone {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::CameraZoneV1_06_63_02PC,
+    },
+    CharacterDescription,
+    CollisionVol {
+        (Asobo(1, 291, 3, _), _) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::CollisionVolV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::CollisionVolV1_381_67_09PC,
+    },
     CollisionVolData,
     Conductor,
+    DataBaseFile,
+    DataContainer,
     Decal,
     DialogEvent,
+    EmbeddedFile,
+    EngineParameters,
     Entity,
+    EntityData,
+    Fence,
+    FenceDatas,
     Flare,
     FlareData,
     FogVolume,
-    Fonts,
+    Font3D,
+    Fonts {
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::FontsV1_06_63_02PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::FontsV1_381_67_09PC,
+    },
     FxParticles,
     FxParticlesData,
-    GameObj,
-    GenWorld,
+    GameObj {
+        (Asobo(1, 291, 3, 6), PC) | (Asobo(1, 291, 3, 1), PSP) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::GameObjV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::GameObjV1_381_67_09PC,
+    },
+    GameParameters,
+    GenWorld {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::GenWorldV1_381_67_09PC,
+    },
     Graph,
-    GwRoad,
+    GraphDummy,
+    GwRoad {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::GwRoadV1_381_67_09PC,
+    },
     HFog,
     HFogData,
     HullSplineZone,
-    Light,
-    LightData,
+    InGameAnimationFile,
+    InGameFile,
+    LensFlare,
+    LensFlareData,
+    Light {
+        (Asobo(1, 3..=291, _, _), _) => v1_291_03_06_pc::LightV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LightV1_381_67_09PC,
+    },
+    LightData {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LightDataV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LightDataV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LightDataV1_381_67_09PC,
+    },
     LightProbeVolume,
-    Lod,
-    LodData,
+    LipSync,
+    Lod {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LodV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LodV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LodV1_381_67_09PC,
+    },
+    LodData {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LodDataV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LodDataV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LodDataV1_381_67_09PC,
+    },
     MassInstancingVolume,
-    Material,
-    MaterialAnim,
+    Material {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MaterialV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MaterialV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MaterialV1_381_67_09PC,
+    },
+    MaterialAnim {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MaterialAnimV1_381_67_09PC,
+    },
     MaterialCollect,
-    MaterialObj,
-    Mesh,
-    MeshData,
+    MaterialObj {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MaterialObjV1_381_67_09PC,
+    },
+    MenuMasterMenu,
+    Mesh {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MeshV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MeshV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MeshV1_381_67_09PC,
+        ;
+        pub mod shared;
+    },
+    MeshData {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MeshDataV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MeshDataV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MeshDataV1_381_67_09PC,
+    },
+    NavigationArea,
+    NavigationSpline,
     NetBingObj,
-    Node,
+    Node {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::NodeV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::NodeV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::NodeV1_381_67_09PC,
+    },
+    Object,
+    ObjectDatas,
     Occluder,
-    Omni,
+    Omni {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::OmniV1_06_63_02PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::OmniV1_381_67_09PC,
+    },
     OmniData,
     Override,
-    Particles,
-    ParticlesData,
+    Package,
+    ParameterTableFile,
+    Particles {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::ParticlesV1_381_67_09PC,
+    },
+    ParticlesData {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::ParticlesDataV1_381_67_09PC,
+    },
     Prefab,
     PrefabRef,
+    Projector,
+    ProjectorData,
     ReflectionProbe,
-    RotShape,
-    RotShapeData,
-    Rtc,
+    RotShape {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::RotShapeV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::RotShapeV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::RotShapeV1_381_67_09PC,
+    },
+    RotShapeData {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::RotShapeDataV1_381_67_09PC,
+    },
+    Rtc {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::RtcV1_381_67_09PC,
+    },
     Shader,
-    Skel,
-    Skin,
+    Skel {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SkelV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::SkelV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SkelV1_381_67_09PC,
+    },
+    SkelData,
+    Skin {
+        (Asobo(1, 291, 3, 6), PC) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::SkinV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SkinV1_381_67_09PC,
+    },
     SkinData,
-    Sound,
+    Sound {
+        (Asobo(1, 6..=291, _, _), _) => v1_291_03_06_pc::SoundV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SoundV1_381_67_09PC,
+        ;
+        pub mod shared;
+    },
+    SoundAmbience,
+    SoundData,
     SoundEvent,
+    SoundId,
+    SoundNode,
     SpecialEffectNode,
-    Spline,
-    SplineGraph,
+    Spline {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SplineV1_06_63_02PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SplineV1_381_67_09PC,
+    },
+    SplineGraph {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SplineGraphV1_381_67_09PC,
+    },
+    SplineNode,
+    SplinePointNode,
+    SplinePointTangentNode,
     SplineZone,
-    Surface,
-    SurfaceDatas,
+    SubWorld,
+    Surface {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SurfaceV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::SurfaceV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SurfaceV1_381_67_09PC,
+    },
+    SurfaceDatas {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SurfaceDatasV1_381_67_09PC,
+    },
     Terrain,
     Texture,
+    TriggerNode,
     Txt,
-    UserDefine,
+    UI3DCanvas,
+    UIContainer,
+    UIFont,
+    UILayoutNode,
+    UIListBox,
+    UIMaterial,
+    UINineSlice,
+    UIPanel,
+    UITextPanel,
+    UserDefine {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::UserDefineV1_381_67_09PC,
+        (Asobo(1, _, _, _), _) => v1_291_03_06_pc::UserDefineV1_291_03_06PC,
+    },
     UserDefineScript,
-    Warp,
-    World,
-    WorldRef,
+    Warp {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::WarpV1_381_67_09PC,
+        (Asobo(1, _, _, _), _) => v1_06_63_02_pc::WarpV1_06_63_02PC,
+    },
+    World {
+        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::WorldV1_06_63_02PC,
+        (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::WorldV1_291_03_06PC,
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::WorldV1_381_67_09PC,
+    },
+    WorldRef {
+        (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::WorldRefV1_381_67_09PC,
+    },
     XRefNode,
 }

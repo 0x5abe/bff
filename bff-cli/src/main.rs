@@ -4,6 +4,7 @@ use bff::bigfile::platforms::Platform;
 use bff::bigfile::versions::Version;
 use clap::*;
 use crc::{CrcAlgorithm, CrcFormat, CrcMode};
+use crypt::CryptAlgorithm;
 use error::BffCliResult;
 use extract::ExportStrategy;
 use lz::LzEndian;
@@ -14,7 +15,8 @@ mod cps;
 mod crc;
 mod create;
 mod create_resource;
-mod csc;
+mod crypt;
+mod diff;
 mod dump_json_schema;
 mod error;
 mod extract;
@@ -22,16 +24,21 @@ mod extract_resource;
 mod fat_lin;
 mod info;
 mod lz;
+mod mqfel_settings_bin;
 mod names;
 mod psc;
 mod stdio_or_path;
 mod try_your_best;
 
+use mimalloc::MiMalloc;
 use shadow_rs::shadow;
 
 use crate::names::Wordlist;
 use crate::psc::PscAlgorithm;
 use crate::stdio_or_path::StdioOrPath;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 shadow!(build);
 
@@ -50,6 +57,8 @@ enum Commands {
         #[clap(value_enum)]
         #[arg(short, long, default_value_t = ExportStrategy::Binary)]
         export_strategy: ExportStrategy,
+        #[arg(long, default_value_t = String::from(".d"))]
+        rich_suffix: String,
     },
     #[clap(alias = "c")]
     Create {
@@ -95,6 +104,14 @@ enum Commands {
         in_names: Vec<PathBuf>,
         #[arg(long)]
         out_reference_graph: Option<PathBuf>,
+    },
+    Diff {
+        old_bigfile: PathBuf,
+        new_bigfile: PathBuf,
+        #[arg(long)]
+        old_names: Option<PathBuf>,
+        #[arg(long)]
+        new_names: Option<PathBuf>,
     },
     Names {
         bigfile: Option<PathBuf>,
@@ -147,14 +164,31 @@ enum Commands {
         #[arg(short, long)]
         algorithm: LzAlgorithm,
     },
-    Csc {
-        input: StdioOrPath,
-        output: StdioOrPath,
+    Uncrypt {
+        crypted: StdioOrPath,
+        uncrypted: StdioOrPath,
+        #[clap(value_enum)]
+        #[arg(short, long)]
+        algorithm: CryptAlgorithm,
         #[arg(
             short,
             long,
             default_value_t = 255,
-            help = "If the default value of 255 does not work, try 252"
+            help = "Only used by csc. If the default value of 255 does not work, try 252"
+        )]
+        key: u8,
+    },
+    Crypt {
+        uncrypted: StdioOrPath,
+        crypted: StdioOrPath,
+        #[clap(value_enum)]
+        #[arg(short, long)]
+        algorithm: CryptAlgorithm,
+        #[arg(
+            short,
+            long,
+            default_value_t = 255,
+            help = "Only used by csc. If the default value of 255 does not work, try 252"
         )]
         key: u8,
     },
@@ -178,6 +212,8 @@ enum Commands {
     ExtractCps {
         cps: PathBuf,
         directory: PathBuf,
+        #[arg(long)]
+        in_names: Vec<PathBuf>,
         #[clap(value_enum)]
         #[arg(short, long, default_value_t = LzEndian::Little)]
         endian: LzEndian,
@@ -186,11 +222,23 @@ enum Commands {
     CreateCps {
         directory: PathBuf,
         cps: PathBuf,
+        #[arg(long)]
+        out_names: Option<PathBuf>,
         #[clap(value_enum)]
         #[arg(short, long, default_value_t = LzEndian::Little)]
         endian: LzEndian,
         #[arg(short, long)]
         unencrypted: bool,
+    },
+    #[clap(alias = "xmsb")]
+    ExtractMqfelSettingsBin {
+        settings_bin: PathBuf,
+        directory: PathBuf,
+    },
+    #[clap(alias = "cmsb")]
+    CreateMqfelSettingsBin {
+        directory: PathBuf,
+        settings_bin: PathBuf,
     },
     #[clap(alias = "xfl")]
     ExtractFatLin {
@@ -228,6 +276,7 @@ fn main() -> BffCliResult<()> {
             platform_override,
             version_override,
             export_strategy,
+            rich_suffix,
         } => extract::extract(
             bigfile,
             directory,
@@ -235,6 +284,7 @@ fn main() -> BffCliResult<()> {
             platform_override,
             version_override,
             export_strategy,
+            rich_suffix,
         ),
         Commands::Create {
             directory,
@@ -284,6 +334,12 @@ fn main() -> BffCliResult<()> {
             in_names,
             out_reference_graph: out_dependencies,
         } => info::info(bigfile, in_names, out_dependencies),
+        Commands::Diff {
+            old_bigfile,
+            new_bigfile,
+            old_names,
+            new_names,
+        } => diff::diff(old_bigfile, new_bigfile, old_names, new_names),
         Commands::Names {
             bigfile,
             wordlist,
@@ -310,7 +366,18 @@ fn main() -> BffCliResult<()> {
             endian,
             algorithm,
         } => lz::lz(uncompressed, compressed, endian, algorithm),
-        Commands::Csc { input, output, key } => csc::csc(input, output, key),
+        Commands::Uncrypt {
+            crypted,
+            uncrypted,
+            algorithm,
+            key,
+        } => crypt::uncrypt(crypted, uncrypted, algorithm, key),
+        Commands::Crypt {
+            uncrypted,
+            crypted,
+            algorithm,
+            key,
+        } => crypt::crypt(uncrypted, crypted, algorithm, key),
         Commands::ExtractPsc {
             psc,
             directory,
@@ -324,14 +391,24 @@ fn main() -> BffCliResult<()> {
         Commands::ExtractCps {
             cps,
             directory,
+            in_names,
             endian,
-        } => cps::extract_cps(cps, directory, endian),
+        } => cps::extract_cps(cps, directory, in_names, endian),
         Commands::CreateCps {
             directory,
             cps,
+            out_names,
             endian,
             unencrypted,
-        } => cps::create_cps(directory, cps, endian, unencrypted),
+        } => cps::create_cps(directory, cps, out_names, endian, unencrypted),
+        Commands::ExtractMqfelSettingsBin {
+            settings_bin,
+            directory,
+        } => mqfel_settings_bin::extract_mqfel_settings_bin(settings_bin, directory),
+        Commands::CreateMqfelSettingsBin {
+            directory,
+            settings_bin,
+        } => mqfel_settings_bin::create_mqfel_settings_bin(directory, settings_bin),
         Commands::ExtractFatLin {
             fat,
             lin,

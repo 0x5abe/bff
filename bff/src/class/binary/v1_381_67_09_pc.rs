@@ -1,8 +1,6 @@
 use bff_derive::ReferencedNames;
 use bilge::prelude::*;
 use binrw::{BinRead, BinWrite};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::class::trivial_class::TrivialClass;
 use crate::helpers::ResourceObjectLinkHeaderV1_381_67_09PC;
@@ -10,7 +8,7 @@ use crate::traits::{Export, Import};
 
 #[bitsize(32)]
 #[derive(
-    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchema,
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
 )]
 struct LookupDescription {
     horizon: u12,
@@ -19,19 +17,19 @@ struct LookupDescription {
 
 #[bitsize(8)]
 #[derive(
-    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchema,
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
 )]
 struct AltitudePack {
     odd: u4,
     even: u4,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct AltitudesPacked {
     altitudes: [AltitudePack; 8],
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct AltitudesUnpacked {
     altitudes: [u8; 16],
 }
@@ -40,7 +38,7 @@ impl AltitudesPacked {
     const SIZE: u32 = 8;
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 struct Internal {
     width: u32,
     height: u32,
@@ -57,7 +55,7 @@ struct Internal {
     lookup: Vec<LookupDescription>,
 }
 
-#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+#[derive(..BffStruct)]
 #[br(import(_link_header: &ResourceObjectLinkHeaderV1_381_67_09PC))]
 pub struct BinaryBodyV1_381_67_09PC {
     data_size: u32,

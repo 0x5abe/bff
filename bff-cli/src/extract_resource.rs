@@ -7,6 +7,7 @@ use bff::bigfile::platforms::Platform;
 use bff::bigfile::resource::{BffClass, BffResource, BffResourceHeader};
 use bff::bigfile::versions::Version;
 use bff::class::Class;
+use bff::names::NameContext;
 use bff::traits::{Artifact, Export, TryIntoVersionPlatform};
 
 use crate::error::BffCliResult;
@@ -19,11 +20,12 @@ pub fn extract_resource(
     platform_override: &Option<Platform>,
     version_override: &Option<Version>,
 ) -> BffCliResult<()> {
-    read_in_names(in_names)?;
+    let name_context = NameContext::default();
+    read_in_names(in_names, &name_context)?;
 
     let f = File::open(resource_path)?;
     let mut reader = BufReader::new(f);
-    let bff_resource = BffResource::read(&mut reader)?;
+    let bff_resource = BffResource::read(&mut reader, &name_context)?;
 
     let platform = platform_override.unwrap_or(bff_resource.header.platform);
     let version = version_override
@@ -42,7 +44,7 @@ pub fn extract_resource(
 
     let resource_serialized_path = directory.join("resource.json");
     let resource_serialized_writer = BufWriter::new(File::create(resource_serialized_path)?);
-    serde_json::to_writer_pretty(resource_serialized_writer, &bff_class)?;
+    bff::names::json::to_writer_pretty(resource_serialized_writer, &bff_class, &name_context)?;
 
     if let Ok(artifacts) = bff_class.class.export() {
         for (name, artifact) in artifacts {
@@ -53,6 +55,7 @@ pub fn extract_resource(
                     std::fs::write(artifact_path.with_extension("bin"), bytes)?
                 }
                 Artifact::Dds(bytes) => std::fs::write(artifact_path.with_extension("dds"), bytes)?,
+                Artifact::Wav(bytes) => std::fs::write(artifact_path.with_extension("wav"), bytes)?,
                 Artifact::Text(text) => std::fs::write(artifact_path.with_extension("txt"), text)?,
             }
         }
