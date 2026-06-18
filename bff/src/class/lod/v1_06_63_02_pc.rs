@@ -38,9 +38,9 @@ pub struct LodBodyV1_06_63_02PC {
     close: Vec3f,
     component_names: DynArray<Name>,
     shadow_name: Name,
-    anims: DynArray<ClassRes>,
     #[br(if(link_header.flags & 0x100000 != 0))]
-    sounds: Option<DynArray<ClassRes>>,
+    anims: Option<DynArray<ClassRes>>,
+    sounds: DynArray<ClassRes>,
     user_define_name: Name,
 }
 

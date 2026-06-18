@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::class::trivial_class::TrivialClass;
-use crate::helpers::{Mat3f, RGB, RGBA, ResourceObjectLinkHeaderV1_06_63_02PC};
+use crate::helpers::{Mat3x4f, Vec3f, RGB, RGBA, ResourceObjectLinkHeaderV1_06_63_02PC};
 use crate::names::Name;
 use crate::traits::{Export, Import};
 
@@ -14,20 +14,16 @@ pub struct MaterialBodyV1_291_03_06PC {
     pub diffuse: RGBA,
     pub emission: RGB,
     cdcdcdcd: u32,
-    uv_transform_matrix: Mat3f,
-    unknown1s: [f32; 8],
-    unknown2s: [u32; 3],
+    uv_transform_matrix: Mat3x4f,
+    specular: Vec3f,
+    specular_pow: f32,
+    params: [u32; 4],
     diffuse_translation: [f32; 2],
     diffuse_scale: [f32; 2],
     diffuse_rotation: f32,
     flags: [u32; 3],
     texture_flag: u8,
-    #[br(count = match texture_flag {
-        1 => 8,
-        3 => 2,
-        _ => 4,
-    })]
-    pub textures: Vec<Name>,
+    textures: [Name; 8],
 }
 
 pub type MaterialV1_291_03_06PC =

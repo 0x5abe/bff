@@ -118,7 +118,7 @@ macro_rules! bff_class {
         }
     };
     ($class:ident { $($pattern:pat => $variant:ident),* $(,)? }) => {
-        #[derive(serde::Serialize, serde::Deserialize, Debug, derive_more::From, derive_more::IsVariant, bff_derive::ReferencedNames, schemars::JsonSchema)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, derive_more::IsVariant, bff_derive::ReferencedNames, schemars::JsonSchema)]
         pub enum $class {
             $($variant(std::boxed::Box<$variant>)),*
         }
@@ -155,7 +155,7 @@ macro_rules! bff_class {
                 match (version.clone(), platform) {
                     $($pattern => {
                         let shadow_class: $variant = <&crate::bigfile::resource::Resource as crate::traits::TryIntoVersionPlatform<$variant>>::try_into_version_platform(resource, version, platform)?;
-                        Ok(std::boxed::Box::new(shadow_class).into())
+                        Ok($class::$variant(std::boxed::Box::new(shadow_class)))
                     })*
                     _ => Err(
                         // TODO: Pick the right name based on the algorithm and suffix for the current BigFile

@@ -6,11 +6,11 @@ use serde::{Deserialize, Serialize};
 use super::generic::{AABBNode, Strip, VertexGroupFlags, Vertices};
 use crate::class::trivial_class::TrivialClass;
 use crate::helpers::{
+    BffBox,
     Cylindre,
     DynArray,
-    DynBox,
-    DynSphere,
     ObjectLinkHeaderV1_06_63_02PC,
+    Sphere,
     Vec2f,
     Vec3,
     Vec3f,
@@ -65,8 +65,22 @@ struct Points {
 }
 
 #[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+struct SphereCol {
+    col_sph: Sphere,
+    flag: u32,
+    name: Name,
+}
+
+#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
+struct BoxCol {
+    col_box: BffBox,
+    flag: u32,
+    name: Name,
+}
+
+#[derive(BinRead, Debug, Serialize, BinWrite, Deserialize, JsonSchema, ReferencedNames)]
 struct CylindreCol {
-    cylindre: Cylindre,
+    col_cylindre: Cylindre,
     flag: u32,
     name: Name,
 }
@@ -166,8 +180,8 @@ pub struct MeshBodyV1_291_03_06PC {
     drawing_cutoff_distance: f32,
     shadow_related: u32,
     related_to_counts: [u32; 3],
-    sphere_cols: DynArray<DynSphere>,
-    box_cols: DynArray<DynBox>,
+    sphere_cols: DynArray<SphereCol>,
+    box_cols: DynArray<BoxCol>,
     cylindre_cols: DynArray<CylindreCol>,
     collision_aabb_tris: DynArray<AABBColTri>,
     collision_aabbs: DynArray<AABBNode>,
