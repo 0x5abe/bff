@@ -1,6 +1,6 @@
 use binrw::{BinRead, BinWrite};
 
-use super::{DynArray, NumeratorFloat, Vec, Vec2f, Vec2i16, Vec3f, Vec4f, Vec4i16};
+use super::{DynArray, NumeratorFloat, Vec as BffVec, Vec2f, Vec3f, Vec4f};
 use crate::names::Name;
 
 type Key = f32;
@@ -64,29 +64,53 @@ pub struct Message {
     message_name: Name,
 }
 
-pub type Vec3Comp = Vec<3, NumeratorFloat<i16, 4096>>;
-pub type QuatComp = Vec<4, NumeratorFloat<i16, 2000>>;
+#[derive(..BffStruct)]
+pub struct KeyFollow {
+    node_name: Name,
+    axis: Vec3f,
+    progress: f32,
+    orientation: u32,
+}
+
+#[derive(..BffStruct)]
+pub struct StartStop {
+    anim_frame_name: Name,
+    value: u32,
+}
+
+#[derive(..BffStruct)]
+pub struct KeyStartStop {
+    start_stop_count: u32,
+    time: f32,
+    #[br(count = start_stop_count)]
+    start_stops: Vec<StartStop>,
+}
+
+pub type Vec4Comp = BffVec<4, NumeratorFloat<i16, 4096>>;
+pub type Vec3Comp = BffVec<3, NumeratorFloat<i16, 4096>>;
+pub type Vec2Comp = BffVec<2, NumeratorFloat<i16, 4096>>;
+pub type QuatComp = BffVec<4, NumeratorFloat<i16, 2000>>;
 
 pub type KeyFlag = KeyLinearTpl<u32>;
 pub type KeyHdl = KeyLinearTpl<Name>;
 pub type KeyMessage = KeyLinearTpl<DynArray<Message>>;
 pub type KeyFloat = KeyTgtTpl<f32>;
-pub type KeyFloatComp = KeyTgtTpl<i16>;
+pub type KeyFloatComp = KeyTgtTpl<NumeratorFloat<i16, 4096>>;
 pub type KeyFloatLinear = KeyLinearTpl<f32>;
-pub type KeyFloatLinearComp = KeyLinearTpl<i16>;
+pub type KeyFloatLinearComp = KeyLinearTpl<NumeratorFloat<i16, 4096>>;
 pub type KeyU32Linear = KeyLinearTpl<u32>;
 pub type KeyVec2f = KeyTgtTpl<Vec2f>;
-pub type KeyVec2fComp = KeyTgtTpl<Vec2i16>;
+pub type KeyVec2fComp = KeyTgtTpl<Vec2Comp>;
 pub type KeyVec2fLinear = KeyLinearTpl<Vec2f>;
-pub type KeyVec2fLinearComp = KeyLinearTpl<Vec2i16>;
+pub type KeyVec2fLinearComp = KeyLinearTpl<Vec2Comp>;
 pub type KeyVec3f = KeyTgtTpl<Vec3f>;
 pub type KeyVec3fComp = KeyTgtTpl<Vec3Comp>;
 pub type KeyVec3fLinear = KeyLinearTpl<Vec3f>;
 pub type KeyVec3fLinearComp = KeyLinearTpl<Vec3Comp>;
 pub type KeyVec4f = KeyTgtTpl<Vec4f>;
-pub type KeyVec4fComp = KeyTgtTpl<Vec4i16>;
+pub type KeyVec4fComp = KeyTgtTpl<Vec4Comp>;
 pub type KeyVec4fLinear = KeyLinearTpl<Vec4f>;
-pub type KeyVec4fLinearComp = KeyLinearTpl<Vec4i16>;
+pub type KeyVec4fLinearComp = KeyLinearTpl<Vec4Comp>;
 pub type KeyRot = KeyLinearTpl<QuatComp>;
 pub type KeyBezierRot = KeyTgtTpl<Vec3f>;
 
@@ -112,3 +136,5 @@ pub type KeyframerVec4fLinear = KeyframerTpl<KeyVec4fLinear>;
 pub type KeyframerVec4fLinearComp = KeyframerTpl<KeyVec4fLinearComp>;
 pub type KeyframerRot = KeyframerNoFlagsTpl<KeyRot>;
 pub type KeyframerBezierRot = KeyframerNoFlagsTpl<KeyBezierRot>;
+pub type KeyframerFollow = KeyframerNoFlagsTpl<KeyFollow>;
+pub type KeyframerStartStop = KeyframerNoFlagsTpl<KeyStartStop>;
