@@ -17,7 +17,7 @@ classes! {
     AnimationGraphOverride,
     AnimationStack,
     AnimFrame {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::AnimFrameV1_06_63_02PC,
+        (Asobo(1, 6..=291, _, _), PC) => v1_06_63_02_pc::AnimFrameV1_06_63_02PC,
     },
     AreaLight,
     Binary {
