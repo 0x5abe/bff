@@ -5,6 +5,8 @@ use crate::BffResult;
 use crate::class::trivial_class::TrivialClass;
 use crate::error::Error;
 use crate::helpers::{PascalString, ResourceObjectLinkHeaderV1_381_67_09PC};
+use crate::source::classes::node::UserDefineSourcePart;
+use crate::source::part::Named;
 use crate::traits::{Artifact, Export, Import};
 
 #[derive(..BffStruct)]
@@ -35,5 +37,16 @@ impl Import for UserDefineV1_381_67_09PC {
         };
         self.body.data = PascalString::from(data.clone());
         Ok(())
+    }
+}
+
+impl TryFrom<Named<'_, UserDefineV1_381_67_09PC>> for UserDefineSourcePart {
+    type Error = Error;
+
+    fn try_from(named: Named<'_, UserDefineV1_381_67_09PC>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: named.name,
+            data: named.value.body.data.to_string(),
+        })
     }
 }

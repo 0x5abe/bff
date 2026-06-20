@@ -1,3 +1,4 @@
+pub mod dependency;
 pub mod manifest;
 pub mod platforms;
 pub mod resource;
@@ -20,6 +21,7 @@ use petgraph::Graph;
 use schemars::JsonSchema;
 use serde::Serialize;
 
+use crate::bigfile::dependency::DependencyIndex;
 use crate::bigfile::manifest::Manifest;
 use crate::bigfile::resource::Resource;
 use crate::bigfile::v1_06_63_02_pc::BigFileV1_06_63_02PC;
@@ -53,10 +55,8 @@ pub struct BigFile {
 }
 
 impl BigFile {
-    pub fn reference_graph(&self) -> Graph<Name, ()> {
-        let mut graph = Graph::with_capacity(self.resources.len(), 0);
-        let mut node_ids = HashMap::new();
-        for (&name, resource) in &self.resources {
+    pub fn dependency_index(&self) -> DependencyIndex {
+        DependencyIndex::from_references(self.resources.iter().map(|(&name, resource)| {
             let references =
                 <&Resource as TryIntoVersionPlatform<Class>>::try_into_version_platform(
                     resource,
@@ -65,15 +65,12 @@ impl BigFile {
                 )
                 .map(|class| class.referenced_names())
                 .unwrap_or_default();
-            let from_id = *node_ids.entry(name).or_insert_with(|| graph.add_node(name));
-            for reference in references {
-                let to_id = *node_ids
-                    .entry(reference)
-                    .or_insert_with(|| graph.add_node(reference));
-                graph.add_edge(from_id, to_id, ());
-            }
-        }
-        graph
+            (name, references)
+        }))
+    }
+
+    pub fn reference_graph(&self) -> Graph<Name, ()> {
+        self.dependency_index().to_graph()
     }
 }
 

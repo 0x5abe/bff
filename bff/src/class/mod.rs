@@ -136,6 +136,8 @@ classes! {
         (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::NodeV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::NodeV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::NodeV1_381_67_09PC,
+        ;
+        pub mod shared;
     },
     Object,
     ObjectDatas,
@@ -230,6 +232,8 @@ classes! {
     UserDefine {
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::UserDefineV1_381_67_09PC,
         (Asobo(1, _, _, _), _) => v1_291_03_06_pc::UserDefineV1_291_03_06PC,
+        ;
+        pub mod shared;
     },
     UserDefineScript,
     Warp {

@@ -29,6 +29,7 @@ macro_rules! classes {
         $crate::macros::classes::classes!(@emit_class_names_fn $($class)*);
         $crate::macros::classes::classes!(@emit_class_export_impl $($class)*);
         $crate::macros::classes::classes!(@emit_class_import_impl $($class)*);
+        $crate::macros::classes::classes!(@emit_class_type_impl $($class)*);
     };
 
     (@emit_class_enums $($class:ident)*) => {
@@ -37,7 +38,7 @@ macro_rules! classes {
             $($class($crate::macros::classes::classes!(@class_ty $class)),)*
         }
 
-        #[derive(serde::Serialize, Debug, serde::Deserialize, schemars::JsonSchema)]
+        #[derive(Copy, Clone, Eq, PartialEq, Hash, serde::Serialize, Debug, serde::Deserialize, schemars::JsonSchema)]
         pub enum ClassType {
             $($class,)*
         }
@@ -152,6 +153,16 @@ macro_rules! classes {
             fn import(&mut self, artifacts: &std::collections::HashMap<std::ffi::OsString, crate::traits::Artifact>) -> crate::BffResult<()> {
                 match self {
                     $(Class::$class(class) => <$crate::macros::classes::classes!(@class_ty $class) as crate::traits::Import>::import(class, artifacts),)*
+                }
+            }
+        }
+    };
+
+    (@emit_class_type_impl $($class:ident)*) => {
+        impl Class {
+            pub fn class_type(&self) -> ClassType {
+                match self {
+                    $(Class::$class(_) => ClassType::$class,)*
                 }
             }
         }

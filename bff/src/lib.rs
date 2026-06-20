@@ -10,6 +10,7 @@ pub mod helpers;
 pub mod lz;
 pub mod macros;
 pub mod names;
+pub mod source;
 pub mod traits;
 pub mod tsc;
 pub use petgraph; // Re-export petgraph for use with BigFile::reference_graph
