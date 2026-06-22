@@ -16,7 +16,7 @@ use crate::helpers::{
     Vec3f,
 };
 use crate::names::Name;
-use crate::source::classes::node::{NodeFlag, NodeFlags, NodeSourcePart};
+use crate::source::classes::node::{NodeFlag, NodeFlags, NodeSourcePart, NodeSourceParts};
 use crate::source::flags::{FlagMapping, decode_flags};
 use crate::source::part::Named;
 use crate::traits::{Export, Import};
@@ -61,29 +61,35 @@ pub type NodeV1_06_63_02PC =
 impl Export for NodeV1_06_63_02PC {}
 impl Import for NodeV1_06_63_02PC {}
 
-impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourcePart {
+impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
     type Error = Error;
 
     fn try_from(named: Named<'_, NodeV1_06_63_02PC>) -> Result<Self, Self::Error> {
         let body = &named.value.body;
+        let user_define_name =
+            (!body.user_define_name.is_default()).then_some(body.user_define_name);
         let radiosity_bitmap_name =
             (!body.radiosity_bitmap_name.is_default()).then_some(body.radiosity_bitmap_name);
 
         Ok(Self {
-            name: named.name,
-            head_child_name: body.head_child_name,
-            next_node_name: body.next_node_name,
-            object_name: body.object_name,
-            radiosity_bitmap_name,
-            translation: body.translation,
-            rotation: body.rotation,
-            scale: [body.scale; 3],
-            flags: NodeFlags {
-                flags: decode_flags(body.flags, NODE_FLAGS_V1_06_63_02_PC)?,
+            node: NodeSourcePart {
+                head_child_name: body.head_child_name,
+                next_node_name: body.next_node_name,
+                object_name: body.object_name,
+                radiosity_bitmap_name,
+                translation: body.translation,
+                rotation: body.rotation,
+                scale: [body.scale; 3],
+                flags: NodeFlags {
+                    flags: decode_flags(body.flags, NODE_FLAGS_V1_06_63_02_PC)?,
+                },
+                color: body.color,
+                start: body.start,
+                end: body.end,
             },
-            color: body.color,
-            start: body.start,
-            end: body.end,
+            user_define_name,
+            represented_resources: vec![named.name],
+            preserved: Vec::new(),
         })
     }
 }

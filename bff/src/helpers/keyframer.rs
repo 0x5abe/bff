@@ -1,7 +1,23 @@
 use binrw::{BinRead, BinWrite};
 
 use super::{DynArray, NumeratorFloat, Vec as BffVec, Vec2f, Vec3f, Vec4f};
+use crate::BffResult;
 use crate::names::Name;
+use crate::source::keyframer::{
+    Follow,
+    FollowTrack,
+    SourceInterpolation,
+    SourceKey,
+    SourceLinearTrack,
+    SourceTangentKey,
+    SourceTangentTrack,
+    SourceTrack,
+    StartStop as SourceStartStop,
+    StartStopAction,
+    StartStopTrack,
+    ToSourceTrack,
+};
+use crate::source::message::{SourceMessage, SourceMessageTrack};
 
 type Key = f32;
 
@@ -57,11 +73,11 @@ pub struct KeyframerNoFlagsTpl<TKey> {
 
 #[derive(..BffStruct)]
 pub struct Message {
-    message_class: u32,
-    reciever_name: Name,
-    c: u32,
-    parameter: f32,
-    message_name: Name,
+    pub message_id: u32,
+    pub u32_param: Name,
+    pub flag_param: u32,
+    pub float_param: f32,
+    pub name_param: Name,
 }
 
 #[derive(..BffStruct)]
@@ -138,3 +154,210 @@ pub type KeyframerRot = KeyframerNoFlagsTpl<KeyRot>;
 pub type KeyframerBezierRot = KeyframerNoFlagsTpl<KeyBezierRot>;
 pub type KeyframerFollow = KeyframerNoFlagsTpl<KeyFollow>;
 pub type KeyframerStartStop = KeyframerNoFlagsTpl<KeyStartStop>;
+
+fn source_interpolation(interpolation_type: &KeyframerInterpolationType) -> SourceInterpolation {
+    match interpolation_type {
+        KeyframerInterpolationType::Smooth => SourceInterpolation::Smooth,
+        KeyframerInterpolationType::Linear => SourceInterpolation::Linear,
+        KeyframerInterpolationType::Square => SourceInterpolation::Square,
+        KeyframerInterpolationType::Unknown4 => SourceInterpolation::Unknown4,
+        KeyframerInterpolationType::Unknown8 => SourceInterpolation::Unknown8,
+        KeyframerInterpolationType::Unknown17 => SourceInterpolation::Unknown17,
+    }
+}
+
+fn source_tangent_track<T, U>(
+    keyframer: &KeyframerTpl<KeyTgtTpl<T>>,
+    convert: fn(&T) -> U,
+) -> SourceTangentTrack<U> {
+    SourceTrack {
+        interpolation: source_interpolation(&keyframer.interpolation_type),
+        keyframes: keyframer
+            .keyframes
+            .iter()
+            .map(|key| SourceTangentKey {
+                time: key.time,
+                value: convert(&key.value.value),
+                tangent_in: convert(&key.value.tangent_in),
+                tangent_out: convert(&key.value.tangent_out),
+            })
+            .collect(),
+    }
+}
+
+fn source_linear_track<T, U>(
+    keyframer: &KeyframerTpl<KeyLinearTpl<T>>,
+    convert: fn(&T) -> U,
+) -> SourceLinearTrack<U> {
+    SourceTrack {
+        interpolation: source_interpolation(&keyframer.interpolation_type),
+        keyframes: keyframer
+            .keyframes
+            .iter()
+            .map(|key| SourceKey {
+                time: key.time,
+                value: convert(&key.value),
+            })
+            .collect(),
+    }
+}
+
+fn source_linear_no_flags_track<T, U>(
+    keyframer: &KeyframerNoFlagsTpl<KeyLinearTpl<T>>,
+    convert: fn(&T) -> U,
+) -> SourceLinearTrack<U> {
+    SourceTrack {
+        interpolation: SourceInterpolation::Linear,
+        keyframes: keyframer
+            .keyframes
+            .iter()
+            .map(|key| SourceKey {
+                time: key.time,
+                value: convert(&key.value),
+            })
+            .collect(),
+    }
+}
+
+fn copy_value<T: Copy>(value: &T) -> T {
+    *value
+}
+
+fn numerator_float<const DENOMINATOR: usize>(value: &NumeratorFloat<i16, DENOMINATOR>) -> f32 {
+    **value
+}
+
+fn vec3_comp(value: &Vec3Comp) -> Vec3f {
+    [
+        numerator_float(&value[0]),
+        numerator_float(&value[1]),
+        numerator_float(&value[2]),
+    ]
+}
+
+fn quat_comp(value: &QuatComp) -> Vec4f {
+    [
+        numerator_float(&value[0]),
+        numerator_float(&value[1]),
+        numerator_float(&value[2]),
+        numerator_float(&value[3]),
+    ]
+}
+
+pub fn source_message_track(
+    keyframer: &KeyframerMessage,
+    convert_message: fn(&Message) -> SourceMessage,
+) -> SourceMessageTrack {
+    SourceTrack {
+        interpolation: SourceInterpolation::Linear,
+        keyframes: keyframer
+            .keyframes
+            .iter()
+            .map(|key| SourceKey {
+                time: key.time,
+                value: key.value.iter().map(convert_message).collect(),
+            })
+            .collect(),
+    }
+}
+
+fn source_message(message: &Message) -> SourceMessage {
+    SourceMessage::Raw {
+        message_id: message.message_id,
+        u32_param: message.u32_param,
+        flag_param: message.flag_param,
+        float_param: message.float_param,
+        name_param: message.name_param,
+    }
+}
+
+fn start_stop_action(value: u32) -> StartStopAction {
+    match value {
+        0 => StartStopAction::Stop,
+        1 => StartStopAction::Start,
+        2 => StartStopAction::Pause,
+        value => StartStopAction::Unknown(value),
+    }
+}
+
+impl ToSourceTrack<SourceTangentTrack<Vec3f>> for KeyframerVec3f {
+    fn to_source_track(&self) -> BffResult<SourceTangentTrack<Vec3f>> {
+        Ok(source_tangent_track(self, copy_value))
+    }
+}
+
+impl ToSourceTrack<SourceTangentTrack<Vec3f>> for KeyframerVec3fComp {
+    fn to_source_track(&self) -> BffResult<SourceTangentTrack<Vec3f>> {
+        Ok(source_tangent_track(self, vec3_comp))
+    }
+}
+
+impl ToSourceTrack<SourceTangentTrack<f32>> for KeyframerFloatComp {
+    fn to_source_track(&self) -> BffResult<SourceTangentTrack<f32>> {
+        Ok(source_tangent_track(self, numerator_float))
+    }
+}
+
+impl ToSourceTrack<SourceLinearTrack<Vec3f>> for KeyframerVec3fLinear {
+    fn to_source_track(&self) -> BffResult<SourceLinearTrack<Vec3f>> {
+        Ok(source_linear_track(self, copy_value))
+    }
+}
+
+impl ToSourceTrack<SourceLinearTrack<Vec4f>> for KeyframerRot {
+    fn to_source_track(&self) -> BffResult<SourceLinearTrack<Vec4f>> {
+        Ok(source_linear_no_flags_track(self, quat_comp))
+    }
+}
+
+impl ToSourceTrack<SourceMessageTrack> for KeyframerMessage {
+    fn to_source_track(&self) -> BffResult<SourceMessageTrack> {
+        Ok(source_message_track(self, source_message))
+    }
+}
+
+impl ToSourceTrack<FollowTrack> for KeyframerFollow {
+    fn to_source_track(&self) -> BffResult<FollowTrack> {
+        Ok(SourceTrack {
+            interpolation: SourceInterpolation::Linear,
+            keyframes: self
+                .keyframes
+                .iter()
+                .map(|key| SourceKey {
+                    // V1_06 cooked follow keys do not store a key time. Source keeps
+                    // one for formats that do.
+                    time: 0.0,
+                    value: Follow {
+                        spline_node_name: key.node_name,
+                        axis: key.axis,
+                        orient_to_spline: key.orientation != 0,
+                        advance: key.progress,
+                    },
+                })
+                .collect(),
+        })
+    }
+}
+
+impl ToSourceTrack<StartStopTrack> for KeyframerStartStop {
+    fn to_source_track(&self) -> BffResult<StartStopTrack> {
+        Ok(SourceTrack {
+            interpolation: SourceInterpolation::Linear,
+            keyframes: self
+                .keyframes
+                .iter()
+                .map(|key| SourceKey {
+                    time: key.time,
+                    value: key
+                        .start_stops
+                        .iter()
+                        .map(|start_stop| SourceStartStop {
+                            anim_frame_name: start_stop.anim_frame_name,
+                            action: start_stop_action(start_stop.value),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
+    }
+}

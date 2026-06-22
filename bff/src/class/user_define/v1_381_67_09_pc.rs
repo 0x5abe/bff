@@ -5,7 +5,7 @@ use crate::BffResult;
 use crate::class::trivial_class::TrivialClass;
 use crate::error::Error;
 use crate::helpers::{PascalString, ResourceObjectLinkHeaderV1_381_67_09PC};
-use crate::source::classes::node::UserDefineSourcePart;
+use crate::source::classes::user_define::UserDefineSourcePart;
 use crate::source::part::Named;
 use crate::traits::{Artifact, Export, Import};
 

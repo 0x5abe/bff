@@ -2,7 +2,9 @@ use bff_derive::ReferencedNames;
 use bilge::prelude::*;
 use binrw::{BinRead, BinWrite};
 
+use crate::class::message::source_message_v1_06_63_02_pc;
 use crate::class::trivial_class::TrivialClass;
+use crate::error::Error;
 use crate::helpers::{
     KeyframerFloatComp,
     KeyframerFollow,
@@ -13,8 +15,12 @@ use crate::helpers::{
     KeyframerVec3fComp,
     KeyframerVec3fLinear,
     ResourceObjectLinkHeaderV1_06_63_02PC,
+    source_message_track,
 };
 use crate::names::Name;
+use crate::source::classes::node::{AnimFrameSourcePart, AnimFrameSourceParts};
+use crate::source::keyframer::ToSourceTrack;
+use crate::source::part::Named;
 use crate::traits::{Export, Import};
 
 #[bitsize(16)]
@@ -60,3 +66,30 @@ pub type AnimFrameV1_06_63_02PC =
 
 impl Export for AnimFrameV1_06_63_02PC {}
 impl Import for AnimFrameV1_06_63_02PC {}
+
+impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourceParts {
+    type Error = Error;
+
+    fn try_from(named: Named<'_, AnimFrameV1_06_63_02PC>) -> Result<Self, Self::Error> {
+        let body = &named.value.body;
+
+        Ok(Self {
+            anim_frame: AnimFrameSourcePart {
+                name: named.name,
+                duration: body.duration,
+                translation: body.translation_keyframer.to_source_track()?,
+                rotation: body.rot_keyframer.to_source_track()?,
+                scale: body.scale_keyframer.to_source_track()?,
+                time: body.time_keyframer.to_source_track()?,
+                color: body.color_keyframer.to_source_track()?,
+                ambient: body.ambient_keyframer.to_source_track()?,
+                messages: source_message_track(&body.msg_keyframer, source_message_v1_06_63_02_pc),
+                follow: body.follow_keyframer.to_source_track()?,
+                start_stop: body.start_stop_keyframer.to_source_track()?,
+            },
+            animated_node_name: body.animated_node_name,
+            represented_resources: vec![named.name],
+            preserved: Vec::new(),
+        })
+    }
+}

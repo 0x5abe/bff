@@ -6,7 +6,7 @@ use binrw::{BinRead, BinWrite, binrw};
 use derive_more::{Deref, DerefMut};
 use num_traits::{CheckedAdd, Float, NumCast, PrimInt, Signed, Unsigned, cast};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::names::Name;
 
@@ -28,7 +28,90 @@ pub type Mat<const ROWS: usize, const COLUMNS: usize = ROWS, InnerType = f32> =
     [[InnerType; COLUMNS]; ROWS];
 pub type Mat3f = Mat<3>;
 pub type Mat4f = Mat<4>;
-pub type Mat3x4f = Mat<3, 4>;
+
+#[derive(BinRead, BinWrite, Debug, Clone, Copy, Deref, DerefMut, ReferencedNames, JsonSchema)]
+pub struct Mat3x4f(
+    #[deref]
+    #[deref_mut]
+    #[schemars(with = "[[LosslessF32Schema; 4]; 3]")]
+    pub [[f32; 4]; 3],
+);
+
+#[derive(JsonSchema)]
+#[serde(untagged)]
+#[allow(dead_code)]
+enum LosslessF32Schema {
+    Float(f32),
+    Raw { raw_f32_bits: u32 },
+}
+
+#[derive(Clone, Copy)]
+struct LosslessF32(f32);
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum LosslessF32Deserialize {
+    Float(f32),
+    Raw { raw_f32_bits: u32 },
+    Null(()),
+}
+
+impl From<f32> for LosslessF32 {
+    fn from(value: f32) -> Self {
+        Self(value)
+    }
+}
+
+impl From<LosslessF32> for f32 {
+    fn from(value: LosslessF32) -> Self {
+        value.0
+    }
+}
+
+impl Serialize for LosslessF32 {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.0.is_finite() {
+            self.0.serialize(serializer)
+        } else {
+            RawF32Bits {
+                raw_f32_bits: self.0.to_bits(),
+            }
+            .serialize(serializer)
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for LosslessF32 {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(match LosslessF32Deserialize::deserialize(deserializer)? {
+            LosslessF32Deserialize::Float(value) => Self(value),
+            LosslessF32Deserialize::Raw { raw_f32_bits } => Self(f32::from_bits(raw_f32_bits)),
+            LosslessF32Deserialize::Null(()) => Self(f32::NAN),
+        })
+    }
+}
+
+#[derive(Serialize)]
+struct RawF32Bits {
+    raw_f32_bits: u32,
+}
+
+impl Serialize for Mat3x4f {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0
+            .map(|row| row.map(LosslessF32::from))
+            .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Mat3x4f {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let matrix = <[[LosslessF32; 4]; 3]>::deserialize(deserializer)?;
+        Ok(Self(
+            matrix.map(|row| row.map(<f32 as From<LosslessF32>>::from)),
+        ))
+    }
+}
 
 // A fixed precision float with a variable numerator and constant denominator.
 #[derive(..BffStruct, Deref, DerefMut)]

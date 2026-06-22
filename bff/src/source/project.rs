@@ -1,11 +1,37 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::bigfile::BigFile;
 use crate::bigfile::dependency::DependencyIndex;
 use crate::bigfile::resource::{BffClass, BffResourceHeader, Resource};
 use crate::class::{Class, ClassType};
 use crate::names::Name;
+use crate::source::asset::{SourceAsset, SourceAssetBuildFailure, build_source_assets};
+use crate::source::context::UncookContext;
 use crate::traits::{ReferencedNames, TryIntoVersionPlatform};
+
+pub struct SourceProject {
+    pub assets: Vec<SourceAsset>,
+    pub failures: Vec<SourceAssetBuildFailure>,
+    pub represented_resources: HashSet<Name>,
+}
+
+impl SourceProject {
+    pub fn from_bigfile(bigfile: &BigFile) -> Self {
+        let project = CookedProject::from_bigfile(bigfile);
+        Self::from_cooked_project(&project)
+    }
+
+    pub fn from_cooked_project(project: &CookedProject) -> Self {
+        let mut ctx = UncookContext::new(project);
+        let (assets, failures) = build_source_assets(project, &mut ctx);
+
+        Self {
+            assets,
+            failures,
+            represented_resources: ctx.represented_resources().clone(),
+        }
+    }
+}
 
 pub struct CookedProject {
     classes: HashMap<Name, BffClass>,
@@ -75,22 +101,26 @@ impl CookedProject {
     }
 
     pub fn outgoing_of_type(&self, name: &Name, class_type: ClassType) -> Vec<Name> {
-        self.dependencies
-            .outgoing(name)
-            .into_iter()
-            .flatten()
+        let Some(names) = self.dependencies.outgoing(name) else {
+            return Vec::new();
+        };
+
+        names
+            .iter()
             .filter(|to| self.class_type(to) == Some(class_type))
-            .cloned()
+            .copied()
             .collect()
     }
 
     pub fn incoming_of_type(&self, name: &Name, class_type: ClassType) -> Vec<Name> {
-        self.dependencies
-            .incoming(name)
-            .into_iter()
-            .flatten()
+        let Some(names) = self.dependencies.incoming(name) else {
+            return Vec::new();
+        };
+
+        names
+            .iter()
             .filter(|to| self.class_type(to) == Some(class_type))
-            .cloned()
+            .copied()
             .collect()
     }
 }

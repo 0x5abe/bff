@@ -1,5 +1,6 @@
 use crate::macros::classes::classes;
 
+pub mod message;
 pub mod trivial_class;
 
 classes! {
@@ -18,6 +19,8 @@ classes! {
     AnimationStack,
     AnimFrame {
         (Asobo(1, 6..=291, _, _), PC) => v1_06_63_02_pc::AnimFrameV1_06_63_02PC,
+        ;
+        pub mod shared;
     },
     AreaLight,
     Binary {
