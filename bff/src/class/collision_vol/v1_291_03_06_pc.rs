@@ -12,13 +12,14 @@ struct CollisionVolInfo {
 #[derive(..BffStruct)]
 #[br(import(_link_header: &ObjectLinkHeaderV1_06_63_02PC))]
 pub struct CollisionVolBodyV1_291_03_06PC {
-    collision_vol_infos: DynArray<CollisionVolInfo>,
+    infos: DynArray<CollisionVolInfo>,
     in_message_id: u32,
     out_message_id: u32,
-    node_param_names: [u32; 12],
-    float_param_names: [u32; 12],
+    node_name_params: [Name; 12],
+    float_params: [f32; 12],
     anim_frame_names: DynArray<Name>,
-    collision_vol_agent_name: Name,
+    material_anim_names: DynArray<Name>,
+    agent_name: Name,
     anim_start_time: f32,
 }
 

@@ -8,7 +8,7 @@ classes! {
     AIObjectCollection,
     AmbientLightmap,
     Animation {
-        (Asobo(1, 6..=291, _, _), PC) => v1_291_03_06_pc::AnimationV1_291_03_06PC,
+        (Asobo(1, 6..=291, _, _), _) => v1_291_03_06_pc::AnimationV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::AnimationV1_381_67_09PC,
         ;
         pub mod shared;
@@ -18,7 +18,7 @@ classes! {
     AnimationGraphOverride,
     AnimationStack,
     AnimFrame {
-        (Asobo(1, 6..=291, _, _), PC) => v1_06_63_02_pc::AnimFrameV1_06_63_02PC,
+        (Asobo(1, 6..=291, _, _), _) => v1_06_63_02_pc::AnimFrameV1_06_63_02PC,
         ;
         pub mod shared;
     },
@@ -27,7 +27,7 @@ classes! {
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::BinaryV1_381_67_09PC,
     },
     Bitmap {
-        (Asobo(1, 5, 54, 0), GameCube) | (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::BitmapV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::BitmapV1_06_63_02PC,
         (Asobo(1, 231..=291, _, _), _) => v1_291_03_06_pc::BitmapV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::BitmapV1_381_67_09PC,
     },
@@ -35,11 +35,11 @@ classes! {
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::CameraV1_381_67_09PC,
     },
     CameraZone {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::CameraZoneV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::CameraZoneV1_06_63_02PC,
     },
     CharacterDescription,
     CollisionVol {
-        (Asobo(1, 291, 3, _), _) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::CollisionVolV1_291_03_06PC,
+        (Asobo(1, 291, 3, _), _) | (Asobo(1, 6, 63, _), _) => v1_291_03_06_pc::CollisionVolV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::CollisionVolV1_381_67_09PC,
     },
     CollisionVolData,
@@ -65,7 +65,7 @@ classes! {
     FxParticles,
     FxParticlesData,
     GameObj {
-        (Asobo(1, 291, 3, 6), PC) | (Asobo(1, 291, 3, 1), PSP) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::GameObjV1_291_03_06PC,
+        (Asobo(1, 291, 3, 6), PC) | (Asobo(1, 291, 3, 1), PSP) | (Asobo(1, 6, 63, _), _) => v1_291_03_06_pc::GameObjV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::GameObjV1_381_67_09PC,
     },
     GameParameters,
@@ -89,30 +89,30 @@ classes! {
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LightV1_381_67_09PC,
     },
     LightData {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LightDataV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::LightDataV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LightDataV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LightDataV1_381_67_09PC,
     },
     LightProbeVolume,
     LipSync,
     Lod {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LodV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::LodV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LodV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LodV1_381_67_09PC,
     },
     LodData {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::LodDataV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::LodDataV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::LodDataV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::LodDataV1_381_67_09PC,
     },
     MassInstancingVolume,
     Material {
-        (Asobo(1, 5, 54, 0), GameCube) | (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MaterialV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::MaterialV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MaterialV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MaterialV1_381_67_09PC,
     },
     MaterialAnim {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MaterialAnimV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::MaterialAnimV1_06_63_02PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MaterialAnimV1_381_67_09PC,
     },
     MaterialCollect,
@@ -128,7 +128,7 @@ classes! {
         pub mod shared;
     },
     MeshData {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MeshDataV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::MeshDataV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MeshDataV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MeshDataV1_381_67_09PC,
     },
@@ -136,7 +136,7 @@ classes! {
     NavigationSpline,
     NetBingObj,
     Node {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::NodeV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::NodeV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::NodeV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::NodeV1_381_67_09PC,
         ;
@@ -146,7 +146,7 @@ classes! {
     ObjectDatas,
     Occluder,
     Omni {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::OmniV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::OmniV1_06_63_02PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::OmniV1_381_67_09PC,
     },
     OmniData,
@@ -165,7 +165,7 @@ classes! {
     ProjectorData,
     ReflectionProbe,
     RotShape {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::RotShapeV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::RotShapeV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::RotShapeV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::RotShapeV1_381_67_09PC,
     },
@@ -177,18 +177,19 @@ classes! {
     },
     Shader,
     Skel {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SkelV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::SkelV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::SkelV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SkelV1_381_67_09PC,
     },
     SkelData,
     Skin {
         (Asobo(1, 291, 3, 6), PC) | (Asobo(1, 6, 63, 2), PC) => v1_291_03_06_pc::SkinV1_291_03_06PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_01_gc::SkinV1_06_63_01GC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SkinV1_381_67_09PC,
     },
     SkinData,
     Sound {
-        (Asobo(1, 6..=291, _, _), _) => v1_291_03_06_pc::SoundV1_291_03_06PC,
+        (Asobo(1, 6..=291, _, _), PC) => v1_291_03_06_pc::SoundV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SoundV1_381_67_09PC,
         ;
         pub mod shared;
@@ -200,7 +201,7 @@ classes! {
     SoundNode,
     SpecialEffectNode,
     Spline {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SplineV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::SplineV1_06_63_02PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SplineV1_381_67_09PC,
     },
     SplineGraph {
@@ -212,7 +213,7 @@ classes! {
     SplineZone,
     SubWorld,
     Surface {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::SurfaceV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::SurfaceV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::SurfaceV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::SurfaceV1_381_67_09PC,
     },
@@ -244,7 +245,7 @@ classes! {
         (Asobo(1, _, _, _), _) => v1_06_63_02_pc::WarpV1_06_63_02PC,
     },
     World {
-        (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::WorldV1_06_63_02PC,
+        (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::WorldV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::WorldV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::WorldV1_381_67_09PC,
     },

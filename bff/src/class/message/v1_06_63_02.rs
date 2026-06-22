@@ -42,7 +42,10 @@ fn message_args_v1_06_63_02_pc(message: &Message, command: SourceMessageKind) ->
         | SourceMessageKind::MsgAnimStopMaterialAnim
         | SourceMessageKind::MsgAnimPauseMaterialAnim => vec![message.u32_param.to_string()],
         SourceMessageKind::MsgRtcRetrieveNode => {
-            vec![message.u32_param.to_string(), message.name_param.to_string()]
+            vec![
+                message.u32_param.to_string(),
+                message.name_param.to_string(),
+            ]
         }
         SourceMessageKind::MsgRtcOrientNodes
         | SourceMessageKind::MsgRtcSetCameraGame
@@ -51,7 +54,10 @@ fn message_args_v1_06_63_02_pc(message: &Message, command: SourceMessageKind) ->
         | SourceMessageKind::MsgRtcSetCameraForce
         | SourceMessageKind::MsgRtcSetCameraFocus
         | SourceMessageKind::MsgRtcSetCameraDialog => {
-            vec![message.u32_param.to_string(), message.name_param.to_string()]
+            vec![
+                message.u32_param.to_string(),
+                message.name_param.to_string(),
+            ]
         }
         SourceMessageKind::MsgRtcHideNode | SourceMessageKind::MsgRtcUnhideNode => {
             vec![message.name_param.to_string()]
@@ -67,10 +73,16 @@ fn message_args_v1_06_63_02_pc(message: &Message, command: SourceMessageKind) ->
         | SourceMessageKind::MsgRtcWaitAnim
         | SourceMessageKind::MsgRtcStartAnimframe => vec![message.u32_param.to_string()],
         SourceMessageKind::MsgRtcCameraSmooth | SourceMessageKind::MsgRtcStartRtcFx => {
-            vec![message.u32_param.to_string(), message.float_param.to_string()]
+            vec![
+                message.u32_param.to_string(),
+                message.float_param.to_string(),
+            ]
         }
         SourceMessageKind::MsgRtcGoto => {
-            vec![message.name_param.to_string(), message.u32_param.to_string()]
+            vec![
+                message.name_param.to_string(),
+                message.u32_param.to_string(),
+            ]
         }
         SourceMessageKind::MsgRtcSetDof
         | SourceMessageKind::MsgRtcChangeSmoothAnim
@@ -81,7 +93,10 @@ fn message_args_v1_06_63_02_pc(message: &Message, command: SourceMessageKind) ->
             message.float_param.to_string(),
         ],
         SourceMessageKind::MsgRtcPosPerso | SourceMessageKind::MsgRtcPosVehicle => {
-            vec![message.name_param.to_string(), message.u32_param.to_string()]
+            vec![
+                message.name_param.to_string(),
+                message.u32_param.to_string(),
+            ]
         }
         _ => Vec::new(),
     }
