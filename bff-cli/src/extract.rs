@@ -9,6 +9,8 @@ use bff::bigfile::resource::{BffClass, BffResourceHeader, Resource};
 use bff::bigfile::versions::Version;
 use bff::class::Class;
 use bff::names::{Name, NameContext};
+use bff::source::asset::SourceAsset;
+use bff::source::project::SourceProject;
 use bff::traits::{Artifact, Export, TryIntoVersionPlatform};
 use clap::ValueEnum;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -22,6 +24,8 @@ pub enum ExportStrategy {
     Binary,
     #[value(alias("r"))]
     Rich,
+    #[value(alias("s"))]
+    Source,
 }
 
 pub fn read_bigfile_names(bigfile_path: &Path, name_context: &NameContext) -> BffCliResult<()> {
@@ -183,6 +187,37 @@ fn export_bff_resource(
     Ok(())
 }
 
+fn export_source_asset(
+    resources_path: &Path,
+    bigfile: &BigFile,
+    source_asset: &SourceAsset,
+    name_context: &NameContext,
+) -> BffCliResult<()> {
+    let class_name = bigfile
+        .resources
+        .get(&source_asset.name)
+        .map(|resource| resource.class_name.with_context(name_context).to_string())
+        .unwrap_or_else(|| format!("{:?}", source_asset.class_type()));
+    let name = clean_path(strip_suffix_if_exists(
+        source_asset.name.with_context(name_context).to_string(),
+        &format!(".{}", class_name),
+    ));
+    let mut directory = resources_path.join(format!("{}.{}.s", name, class_name));
+    let mut i = 0;
+    while directory.exists() {
+        directory.set_file_name(format!("{}_{}.{}.s", name, i, class_name));
+        i += 1;
+    }
+
+    std::fs::create_dir(&directory)?;
+
+    let source_serialized_path = directory.join("source.json");
+    let source_serialized_writer = BufWriter::new(File::create(source_serialized_path)?);
+    bff::names::json::to_writer_pretty(source_serialized_writer, source_asset, name_context)?;
+
+    Ok(())
+}
+
 pub fn extract(
     bigfile_path: &Path,
     directory: &Path,
@@ -206,6 +241,14 @@ pub fn extract(
         &name_context,
     )?;
 
+    let source_project = match *export_strategy {
+        ExportStrategy::Source => {
+            progress_bar.set_message("Building source project");
+            Some(SourceProject::from_bigfile(&bigfile))
+        }
+        _ => None,
+    };
+
     progress_bar.set_message("Writing manifest");
     std::fs::create_dir_all(directory)?;
 
@@ -214,18 +257,44 @@ pub fn extract(
     bff::names::json::to_writer_pretty(manifest_writer, &bigfile.manifest, &name_context)?;
 
     progress_bar.set_style(ProgressStyle::default_bar());
-    progress_bar.set_length(bigfile.resources.len() as u64);
-
     let resources_path = directory.join("resources");
     std::fs::create_dir(&resources_path)?;
 
+    progress_bar.set_length(
+        (bigfile.resources.len()
+            + source_project
+                .as_ref()
+                .map(|source_project| source_project.assets.len())
+                .unwrap_or_default()) as u64,
+    );
+
+    if let Some(source_project) = &source_project {
+        progress_bar.set_message("Writing source assets");
+        for source_asset in &source_project.assets {
+            export_source_asset(&resources_path, &bigfile, source_asset, &name_context)?;
+            progress_bar.inc(1);
+        }
+    }
+
+    let represented_resources = source_project
+        .as_ref()
+        .map(|source_project| &source_project.represented_resources);
+
+    progress_bar.set_message("Writing resources");
     bigfile
         .resources
         .values()
         .par_bridge()
         .try_for_each(|resource| {
             progress_bar.inc(1);
-            if !matches!(*export_strategy, ExportStrategy::Rich)
+            if represented_resources
+                .map(|represented_resources| represented_resources.contains(&resource.name))
+                .unwrap_or(false)
+            {
+                return Ok(());
+            }
+
+            if matches!(*export_strategy, ExportStrategy::Binary)
                 || export_bff_resource(
                     &resources_path,
                     &bigfile,
