@@ -178,6 +178,7 @@ impl SourcePart for NodeSourcePart {
 pub struct AnimFrameSourcePart {
     pub name: Name,
     pub duration: f32,
+    pub play_flags: AnimFramePlayFlags,
     pub translation: SourceTangentTrack<Vec3f>,
     pub rotation: SourceLinearTrack<Quat>,
     pub scale: SourceTangentTrack<Vec3f>,
@@ -187,6 +188,25 @@ pub struct AnimFrameSourcePart {
     pub messages: SourceMessageTrack,
     pub follow: FollowTrack,
     pub start_stop: StartStopTrack,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema)]
+pub enum AnimFramePlayFlag {
+    Play,
+    Started,
+    ReadMessage,
+    PlayOnce,
+    NeverAgain,
+    Played,
+    AutoStart,
+    Message,
+    Paused,
+    Unknown0x200,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+pub struct AnimFramePlayFlags {
+    pub flags: Vec<AnimFramePlayFlag>,
 }
 
 pub(crate) struct AnimFrameSourceParts {

@@ -1,4 +1,5 @@
 use bff_derive::ReferencedNames;
+use bilge::prelude::*;
 use binrw::{BinRead, BinWrite};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,44 @@ use crate::source::flags::{FlagMapping, decode_flags};
 use crate::source::part::Named;
 use crate::traits::{Export, Import};
 
+#[bitsize(32)]
+#[derive(
+    BinRead, DebugBits, SerializeBits, BinWrite, DeserializeBits, ReferencedNames, JsonSchemaBits,
+)]
+struct NodeFlagsV1_06_63_02PC {
+    fl_node_scan: u1,
+    fl_node_unk_0x2: u1,
+    fl_node_unk_0x4: u1,
+    fl_node_unk_0x8: u1,
+    fl_node_update: u1,
+    fl_node_update_lighting: u1,
+    fl_node_update_object: u1,
+    fl_node_invalidmat: u1,
+    fl_node_invalidrot: u1,
+    fl_node_animated: u1,
+    fl_node_no_omni: u1,
+    fl_node_no_occluder: u1,
+    fl_node_no_agent: u1,
+    fl_node_sequenced: u1,
+    fl_node_skinned: u1,
+    fl_node_uncollided: u1,
+    fl_node_no_seadcollide: u1,
+    fl_node_no_seaddisplay: u1,
+    fl_node_hide: u1,
+    fl_node_user_lock: u1,
+    fl_node_vp0_hide: u1,
+    fl_node_vp1_hide: u1,
+    fl_node_vp2_hide: u1,
+    fl_node_vp3_hide: u1,
+    fl_node_no_unshared: u1,
+    fl_node_unk_0x2000000: u1,
+    fl_node_collide: u1,
+    fl_node_shadow: u1,
+    fl_node_sequenced_abort: u1,
+    fl_node_special_vision: u1,
+    unknown_0xc0000000: u2,
+}
+
 #[derive(BinRead, BinWrite, Debug, Serialize, Deserialize, ReferencedNames, JsonSchema)]
 #[br(import(_link_header: &ResourceObjectLinkHeaderV1_06_63_02PC))]
 pub struct NodeBodyV1_06_63_02PC {
@@ -37,7 +76,7 @@ pub struct NodeBodyV1_06_63_02PC {
     inverse_rot_in_world_matrix: Mat3x4f, // baked
     rot_in_world: Quat,                   // baked
     translation: Vec3f,                   // y
-    flags: u32,                           // y
+    flags: NodeFlagsV1_06_63_02PC,        // y
     rotation: Quat,                       // y
     scale: f32,                           // y as Vec3f cause other games have non uniform scale
     scale_in_world: f32,                  // baked
@@ -81,7 +120,7 @@ impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
                 rotation: body.rotation,
                 scale: [body.scale; 3],
                 flags: NodeFlags {
-                    flags: decode_flags(body.flags, NODE_FLAGS_V1_06_63_02_PC)?,
+                    flags: decode_flags(node_flags_raw(&body.flags), NODE_FLAGS_V1_06_63_02_PC)?,
                 },
                 color: body.color,
                 start: body.start,
@@ -92,6 +131,103 @@ impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
             preserved: Vec::new(),
         })
     }
+}
+
+fn node_flags_raw(flags: &NodeFlagsV1_06_63_02PC) -> u32 {
+    let mut raw = 0;
+
+    if u8::from(flags.fl_node_scan()) != 0 {
+        raw |= 1 << 0;
+    }
+    if u8::from(flags.fl_node_unk_0x2()) != 0 {
+        raw |= 1 << 1;
+    }
+    if u8::from(flags.fl_node_unk_0x4()) != 0 {
+        raw |= 1 << 2;
+    }
+    if u8::from(flags.fl_node_unk_0x8()) != 0 {
+        raw |= 1 << 3;
+    }
+    if u8::from(flags.fl_node_update()) != 0 {
+        raw |= 1 << 4;
+    }
+    if u8::from(flags.fl_node_update_lighting()) != 0 {
+        raw |= 1 << 5;
+    }
+    if u8::from(flags.fl_node_update_object()) != 0 {
+        raw |= 1 << 6;
+    }
+    if u8::from(flags.fl_node_invalidmat()) != 0 {
+        raw |= 1 << 7;
+    }
+    if u8::from(flags.fl_node_invalidrot()) != 0 {
+        raw |= 1 << 8;
+    }
+    if u8::from(flags.fl_node_animated()) != 0 {
+        raw |= 1 << 9;
+    }
+    if u8::from(flags.fl_node_no_omni()) != 0 {
+        raw |= 1 << 10;
+    }
+    if u8::from(flags.fl_node_no_occluder()) != 0 {
+        raw |= 1 << 11;
+    }
+    if u8::from(flags.fl_node_no_agent()) != 0 {
+        raw |= 1 << 12;
+    }
+    if u8::from(flags.fl_node_sequenced()) != 0 {
+        raw |= 1 << 13;
+    }
+    if u8::from(flags.fl_node_skinned()) != 0 {
+        raw |= 1 << 14;
+    }
+    if u8::from(flags.fl_node_uncollided()) != 0 {
+        raw |= 1 << 15;
+    }
+    if u8::from(flags.fl_node_no_seadcollide()) != 0 {
+        raw |= 1 << 16;
+    }
+    if u8::from(flags.fl_node_no_seaddisplay()) != 0 {
+        raw |= 1 << 17;
+    }
+    if u8::from(flags.fl_node_hide()) != 0 {
+        raw |= 1 << 18;
+    }
+    if u8::from(flags.fl_node_user_lock()) != 0 {
+        raw |= 1 << 19;
+    }
+    if u8::from(flags.fl_node_vp0_hide()) != 0 {
+        raw |= 1 << 20;
+    }
+    if u8::from(flags.fl_node_vp1_hide()) != 0 {
+        raw |= 1 << 21;
+    }
+    if u8::from(flags.fl_node_vp2_hide()) != 0 {
+        raw |= 1 << 22;
+    }
+    if u8::from(flags.fl_node_vp3_hide()) != 0 {
+        raw |= 1 << 23;
+    }
+    if u8::from(flags.fl_node_no_unshared()) != 0 {
+        raw |= 1 << 24;
+    }
+    if u8::from(flags.fl_node_unk_0x2000000()) != 0 {
+        raw |= 1 << 25;
+    }
+    if u8::from(flags.fl_node_collide()) != 0 {
+        raw |= 1 << 26;
+    }
+    if u8::from(flags.fl_node_shadow()) != 0 {
+        raw |= 1 << 27;
+    }
+    if u8::from(flags.fl_node_sequenced_abort()) != 0 {
+        raw |= 1 << 28;
+    }
+    if u8::from(flags.fl_node_special_vision()) != 0 {
+        raw |= 1 << 29;
+    }
+
+    raw | (u32::from(u8::from(flags.unknown_0xc0000000())) << 30)
 }
 
 const NODE_FLAGS_V1_06_63_02_PC: &[FlagMapping<NodeFlag>] = &[

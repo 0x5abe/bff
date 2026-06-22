@@ -18,7 +18,13 @@ use crate::helpers::{
     source_message_track,
 };
 use crate::names::Name;
-use crate::source::classes::node::{AnimFrameSourcePart, AnimFrameSourceParts};
+use crate::source::classes::node::{
+    AnimFramePlayFlag,
+    AnimFramePlayFlags as SourceAnimFramePlayFlags,
+    AnimFrameSourcePart,
+    AnimFrameSourceParts,
+};
+use crate::source::flags::{FlagMapping, decode_flags};
 use crate::source::keyframer::ToSourceTrack;
 use crate::source::part::Named;
 use crate::traits::{Export, Import};
@@ -77,6 +83,12 @@ impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourceParts {
             anim_frame: AnimFrameSourcePart {
                 name: named.name,
                 duration: body.duration,
+                play_flags: SourceAnimFramePlayFlags {
+                    flags: decode_flags(
+                        anim_frame_play_flags_raw(&body.play_flags),
+                        ANIM_FRAME_PLAY_FLAGS_V1_06_63_02_PC,
+                    )?,
+                },
                 translation: body.translation_keyframer.to_source_track()?,
                 rotation: body.rot_keyframer.to_source_track()?,
                 scale: body.scale_keyframer.to_source_track()?,
@@ -93,3 +105,83 @@ impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourceParts {
         })
     }
 }
+
+fn anim_frame_play_flags_raw(flags: &AnimFramePlayFlags) -> u32 {
+    let mut raw = 0;
+
+    if u8::from(flags.fl_anim_play()) != 0 {
+        raw |= 1 << 0;
+    }
+    if u8::from(flags.fl_anim_started()) != 0 {
+        raw |= 1 << 1;
+    }
+    if u8::from(flags.fl_anim_readmessage()) != 0 {
+        raw |= 1 << 2;
+    }
+    if u8::from(flags.fl_anim_playonce()) != 0 {
+        raw |= 1 << 3;
+    }
+    if u8::from(flags.fl_anim_neveragain()) != 0 {
+        raw |= 1 << 4;
+    }
+    if u8::from(flags.fl_anim_played()) != 0 {
+        raw |= 1 << 5;
+    }
+    if u8::from(flags.fl_anim_autostart()) != 0 {
+        raw |= 1 << 6;
+    }
+    if u8::from(flags.fl_anim_message()) != 0 {
+        raw |= 1 << 7;
+    }
+    if u8::from(flags.fl_anim_paused()) != 0 {
+        raw |= 1 << 8;
+    }
+    if u8::from(flags.fl_anim_unk_0x200()) != 0 {
+        raw |= 1 << 9;
+    }
+
+    raw | (u32::from(u8::from(flags.padding_i())) << 10)
+}
+
+const ANIM_FRAME_PLAY_FLAGS_V1_06_63_02_PC: &[FlagMapping<AnimFramePlayFlag>] = &[
+    FlagMapping {
+        raw: 1 << 0,
+        source: AnimFramePlayFlag::Play,
+    },
+    FlagMapping {
+        raw: 1 << 1,
+        source: AnimFramePlayFlag::Started,
+    },
+    FlagMapping {
+        raw: 1 << 2,
+        source: AnimFramePlayFlag::ReadMessage,
+    },
+    FlagMapping {
+        raw: 1 << 3,
+        source: AnimFramePlayFlag::PlayOnce,
+    },
+    FlagMapping {
+        raw: 1 << 4,
+        source: AnimFramePlayFlag::NeverAgain,
+    },
+    FlagMapping {
+        raw: 1 << 5,
+        source: AnimFramePlayFlag::Played,
+    },
+    FlagMapping {
+        raw: 1 << 6,
+        source: AnimFramePlayFlag::AutoStart,
+    },
+    FlagMapping {
+        raw: 1 << 7,
+        source: AnimFramePlayFlag::Message,
+    },
+    FlagMapping {
+        raw: 1 << 8,
+        source: AnimFramePlayFlag::Paused,
+    },
+    FlagMapping {
+        raw: 1 << 9,
+        source: AnimFramePlayFlag::Unknown0x200,
+    },
+];
