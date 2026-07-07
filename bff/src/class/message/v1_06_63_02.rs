@@ -12,7 +12,7 @@ pub fn source_message_v1_06_63_02_pc(message: &Message) -> SourceMessage {
     }
 }
 
-pub fn raw_source_message(message: &Message) -> SourceMessage {
+pub const fn raw_source_message(message: &Message) -> SourceMessage {
     SourceMessage::Raw {
         message_id: message.message_id,
         u32_param: message.u32_param,
@@ -102,7 +102,7 @@ fn message_args_v1_06_63_02_pc(message: &Message, command: SourceMessageKind) ->
     }
 }
 
-pub fn message_kind_v1_06_63_02_pc(message_id: u32) -> Option<SourceMessageKind> {
+pub const fn message_kind_v1_06_63_02_pc(message_id: u32) -> Option<SourceMessageKind> {
     Some(match message_id {
         0 => SourceMessageKind::MsgNoMessage,
         1 => SourceMessageKind::MsgAnimNoteTrackFirst,

@@ -20,7 +20,7 @@ pub struct SourceAsset {
 }
 
 impl SourceAsset {
-    pub fn class_type(&self) -> ClassType {
+    pub const fn class_type(&self) -> ClassType {
         self.class_type
     }
 }
@@ -32,7 +32,7 @@ pub enum SourceAssetData {
 }
 
 impl SourceAssetData {
-    pub fn class_type(&self) -> ClassType {
+    pub const fn class_type(&self) -> ClassType {
         match self {
             Self::Node(_) => ClassType::Node,
         }
@@ -53,7 +53,7 @@ pub struct SourceAssetBuild<T> {
 }
 
 impl<T> SourceAssetBuild<T> {
-    pub fn new(name: Name, asset: T) -> Self {
+    pub const fn new(name: Name, asset: T) -> Self {
         Self {
             name,
             asset,

@@ -155,7 +155,9 @@ pub type KeyframerBezierRot = KeyframerNoFlagsTpl<KeyBezierRot>;
 pub type KeyframerFollow = KeyframerNoFlagsTpl<KeyFollow>;
 pub type KeyframerStartStop = KeyframerNoFlagsTpl<KeyStartStop>;
 
-fn source_interpolation(interpolation_type: &KeyframerInterpolationType) -> SourceInterpolation {
+const fn source_interpolation(
+    interpolation_type: &KeyframerInterpolationType,
+) -> SourceInterpolation {
     match interpolation_type {
         KeyframerInterpolationType::Smooth => SourceInterpolation::Smooth,
         KeyframerInterpolationType::Linear => SourceInterpolation::Linear,
@@ -219,7 +221,7 @@ fn source_linear_no_flags_track<T, U>(
     }
 }
 
-fn copy_value<T: Copy>(value: &T) -> T {
+const fn copy_value<T: Copy>(value: &T) -> T {
     *value
 }
 
@@ -261,7 +263,7 @@ pub fn source_message_track(
     }
 }
 
-fn source_message(message: &Message) -> SourceMessage {
+const fn source_message(message: &Message) -> SourceMessage {
     SourceMessage::Raw {
         message_id: message.message_id,
         u32_param: message.u32_param,
@@ -271,7 +273,7 @@ fn source_message(message: &Message) -> SourceMessage {
     }
 }
 
-fn start_stop_action(value: u32) -> StartStopAction {
+const fn start_stop_action(value: u32) -> StartStopAction {
     match value {
         0 => StartStopAction::Stop,
         1 => StartStopAction::Start,

@@ -5,7 +5,7 @@ use crate::BffResult;
 use crate::class::{Class, ClassType};
 use crate::error::{MissingSourceResourceError, WrongSourceClassError};
 use crate::names::Name;
-use crate::source::part::{SourcePart, ToSourcePart};
+use crate::source::part::{SourcePart, ToSourcePart as _};
 use crate::source::project::CookedProject;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

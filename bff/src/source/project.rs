@@ -90,7 +90,7 @@ impl CookedProject {
         self.names_by_class_type.get(&class_type)
     }
 
-    pub fn dependencies(&self) -> &DependencyIndex {
+    pub const fn dependencies(&self) -> &DependencyIndex {
         &self.dependencies
     }
 

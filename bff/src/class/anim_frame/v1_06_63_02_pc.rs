@@ -25,7 +25,7 @@ use crate::source::classes::node::{
     AnimFrameSourceParts,
 };
 use crate::source::flags::{FlagMapping, decode_flags};
-use crate::source::keyframer::ToSourceTrack;
+use crate::source::keyframer::ToSourceTrack as _;
 use crate::source::part::Named;
 use crate::traits::{Export, Import};
 

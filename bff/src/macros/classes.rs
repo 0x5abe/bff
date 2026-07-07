@@ -163,7 +163,7 @@ macro_rules! classes {
 
     (@emit_class_type_impl $($class:ident)*) => {
         impl Class {
-            pub fn class_type(&self) -> ClassType {
+            pub const fn class_type(&self) -> ClassType {
                 match self {
                     $(Class::$class(_) => ClassType::$class,)*
                 }

@@ -16,7 +16,7 @@ use crate::source::keyframer::{
     StartStopTrack,
 };
 use crate::source::message::SourceMessageTrack;
-use crate::source::part::{SourcePart, ToSourcePart};
+use crate::source::part::{SourcePart, ToSourcePart as _};
 use crate::source::preservation::PreservedFragment;
 use crate::source::project::CookedProject;
 

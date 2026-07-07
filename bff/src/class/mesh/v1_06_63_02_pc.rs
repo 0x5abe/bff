@@ -4,8 +4,8 @@ use bff_derive::ReferencedNames;
 use binrw::{BinRead, BinWrite, Endian, binrw};
 use schemars::schema::Schema;
 use schemars::{JsonSchema, SchemaGenerator};
-use serde::de::Error as DeError;
-use serde::ser::Error as SerError;
+use serde::de::Error as _;
+use serde::ser::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::shared::{AABBNode, Strip};
@@ -267,7 +267,7 @@ enum MeshVertexBuffer {
 }
 
 impl MeshVertexBuffer {
-    fn layout(&self) -> u16 {
+    const fn layout(&self) -> u16 {
         match self {
             Self::NoBlend(_) => VERTEX_LAYOUT_NO_BLEND,
             Self::Volume(_) => VERTEX_LAYOUT_VOLUME,
@@ -279,7 +279,7 @@ impl MeshVertexBuffer {
         }
     }
 
-    fn stride(&self) -> u16 {
+    const fn stride(&self) -> u16 {
         match self {
             Self::NoBlend(_) => VertexLayoutNoBlend::SIZE,
             Self::Volume(_) => VertexLayoutVolume::SIZE,
@@ -291,7 +291,7 @@ impl MeshVertexBuffer {
         }
     }
 
-    fn len(&self) -> usize {
+    const fn len(&self) -> usize {
         match self {
             Self::NoBlend(vertices) => vertices.len(),
             Self::Volume(vertices) => vertices.len(),

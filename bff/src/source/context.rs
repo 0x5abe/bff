@@ -23,7 +23,7 @@ impl<'a> UncookContext<'a> {
         }
     }
 
-    pub fn project(&self) -> &'a CookedProject {
+    pub const fn project(&self) -> &'a CookedProject {
         self.project
     }
 
@@ -39,7 +39,7 @@ impl<'a> UncookContext<'a> {
         self.represented_resources.insert(name);
     }
 
-    pub fn represented_resources(&self) -> &HashSet<Name> {
+    pub const fn represented_resources(&self) -> &HashSet<Name> {
         &self.represented_resources
     }
 

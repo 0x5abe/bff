@@ -39,7 +39,7 @@ pub struct Mat3x4f(
 
 #[derive(JsonSchema)]
 #[serde(untagged)]
-#[allow(dead_code)]
+#[expect(dead_code)]
 enum LosslessF32Schema {
     Float(f32),
     Raw { raw_f32_bits: u32 },
