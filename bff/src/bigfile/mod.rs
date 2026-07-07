@@ -18,12 +18,11 @@ pub mod versions;
 use std::collections::HashMap;
 
 use petgraph::Graph;
-use schemars::JsonSchema;
-use serde::Serialize;
 
 use crate::bigfile::dependency::DependencyIndex;
 use crate::bigfile::manifest::Manifest;
 use crate::bigfile::resource::Resource;
+use crate::bigfile::resource::bff_resource::BffResourceRef;
 use crate::bigfile::v1_06_63_02_pc::BigFileV1_06_63_02PC;
 use crate::bigfile::v1_08_40_02_pc::BigFileV1_08_40_02PC;
 use crate::bigfile::v1_22_pc::{
@@ -39,38 +38,87 @@ use crate::bigfile::v2_07_pc::{BigFileV2_07PCPROTO, BigFileV2_07PCSHAUN};
 use crate::bigfile::v2_128_52_19_pc::BigFileV2_128_52_19PC;
 use crate::bigfile::v2_128_92_19_pc::BigFileV2_128_92_19PC;
 use crate::bigfile::v2_256_38_19_pc::BigFileV2_256_38_19PC;
-use crate::class::Class;
 use crate::macros::bigfiles::bigfiles;
-use crate::names::Name;
-use crate::traits::{ReferencedNames, TryIntoVersionPlatform};
+use crate::names::{Name, NameContext};
+use crate::traits::ReferencedNames as _;
 
 pub static DEFAULT_TAG: &str = "made with <3 by bff contributors (https://github.com/widberg/bff)";
 
-#[derive(Serialize, JsonSchema, Debug, Eq, PartialEq)]
+pub type ResourceMap = HashMap<Name, Resource>;
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct BigFile {
-    #[serde(flatten)]
-    pub manifest: Manifest,
-    #[serde(skip)]
-    pub resources: HashMap<Name, Resource>,
+    manifest: Manifest,
+    resources: ResourceMap,
 }
 
 impl BigFile {
-    pub fn dependency_index(&self) -> DependencyIndex {
-        DependencyIndex::from_references(self.resources.iter().map(|(&name, resource)| {
-            let references =
-                <&Resource as TryIntoVersionPlatform<Class>>::try_into_version_platform(
-                    resource,
-                    self.manifest.version.clone(),
-                    self.manifest.platform,
-                )
-                .map(|class| class.referenced_names())
+    pub const fn new(manifest: Manifest, resources: ResourceMap) -> Self {
+        Self {
+            manifest,
+            resources,
+        }
+    }
+
+    pub const fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+
+    pub fn resource_names(&self) -> impl ExactSizeIterator<Item = Name> + '_ {
+        self.resources.keys().copied()
+    }
+
+    pub fn bff_resources(&self) -> impl ExactSizeIterator<Item = BffResourceRef<'_>> + '_ {
+        let platform = self.manifest.platform;
+        let version = &self.manifest.version;
+        self.resources.values().map(move |resource| BffResourceRef {
+            platform,
+            version,
+            resource,
+        })
+    }
+
+    pub fn bff_resource(&self, name: Name) -> Option<BffResourceRef<'_>> {
+        let platform = self.manifest.platform;
+        let version = &self.manifest.version;
+        self.resources.get(&name).map(|resource| BffResourceRef {
+            platform,
+            version,
+            resource,
+        })
+    }
+
+    pub fn dependency_index(&self, name_context: &NameContext) -> DependencyIndex {
+        DependencyIndex::from_references(self.bff_resources().map(|bff_resource| {
+            let name = bff_resource.resource.name;
+            let references = bff_resource
+                .bff_class(name_context)
+                .map(|bff_class| bff_class.class.referenced_names())
                 .unwrap_or_default();
             (name, references)
         }))
     }
 
-    pub fn reference_graph(&self) -> Graph<Name, ()> {
-        self.dependency_index().to_graph()
+    pub fn reference_graph(&self, name_context: &NameContext) -> Graph<Name, ()> {
+        self.dependency_index(name_context).to_graph()
+    }
+
+    pub fn probe_name_type_platform<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        _platform: crate::bigfile::platforms::Platform,
+        version_override: Option<&crate::bigfile::versions::Version>,
+    ) -> crate::BffResult<crate::names::NameType> {
+        use binrw::BinRead as _;
+
+        let start = reader.stream_position()?;
+        let version: crate::bigfile::versions::Version =
+            crate::helpers::FixedStringNull::<256>::read_be(reader)?
+                .as_str()
+                .into();
+        reader.seek(std::io::SeekFrom::Start(start))?;
+
+        let version = version_override.cloned().unwrap_or(version);
+        version.name_type()
     }
 }
 
@@ -81,18 +129,18 @@ impl BigFile {
 // and knobs. We can define the config similar to what's below but the rest of
 // the code should be a lot simpler and less repetitive.
 bigfiles! {
-    (Kalisto(1, 75 | 73) | BlackSheep(1, _), _) => BigFileV1_22PCNoVersionTripleBlackSheep,
-    (Kalisto(1, _), _) => BigFileV1_22PCNoVersionTriple,
-    (BlackSheep(2, ..=7) | BlackSheep(2, 158..), _) => BigFileV2_07PCPROTO,
-    (BlackSheep(2, _), _) => BigFileV2_07PCSHAUN,
-    (Ubisoft { .. }, _) => BigFileV2_0PC,
-    (AsoboLegacy(1, ..=80), _) => BigFileV1_22PC,
-    (AsoboLegacy(1, _) | Asobo(1, 1..=5 | 8, _, _), _) => BigFileV1_08_40_02PC,
-    (Asobo(1, 1..=380, _, _), _) => BigFileV1_06_63_02PC,
-    (Asobo(1, 381..=1999, _, _), _) => BigFileV1_381_64_09PC,
-    (Asobo(1, 0 | 2000..=2001, _, _), _) => BigFileV1_2000_77_18PC,
-    (Asobo(1, 2002.., _, _), _) => BigFileV1_2002_45_19PC,
-    (Asobo(2, 128, 92 | 18, _), _) => BigFileV2_128_92_19PC,
-    (Asobo(2, 256, 49, _) | Asobo(2, 128, 52, _), _) => BigFileV2_128_52_19PC,
-    (Asobo(2, 256, _, _), _) => BigFileV2_256_38_19PC,
+    Kalisto(1, 75 | 73) | BlackSheep(1, _) => BigFileV1_22PCNoVersionTripleBlackSheep,
+    Kalisto(1, _) => BigFileV1_22PCNoVersionTriple,
+    BlackSheep(2, ..=7) | BlackSheep(2, 158..) => BigFileV2_07PCPROTO,
+    BlackSheep(2, _) => BigFileV2_07PCSHAUN,
+    Ubisoft { .. } => BigFileV2_0PC,
+    AsoboLegacy(1, ..=80) => BigFileV1_22PC,
+    AsoboLegacy(1, _) | Asobo(1, 1..=5 | 8, _, _) => BigFileV1_08_40_02PC,
+    Asobo(1, 1..=380, _, _) => BigFileV1_06_63_02PC,
+    Asobo(1, 381..=1999, _, _) => BigFileV1_381_64_09PC,
+    Asobo(1, 0 | 2000..=2001, _, _) => BigFileV1_2000_77_18PC,
+    Asobo(1, 2002.., _, _) => BigFileV1_2002_45_19PC,
+    Asobo(2, 128, 92 | 18, _) => BigFileV2_128_92_19PC,
+    Asobo(2, 256, 49, _) | Asobo(2, 128, 52, _) => BigFileV2_128_52_19PC,
+    Asobo(2, 256, _, _) => BigFileV2_256_38_19PC,
 }

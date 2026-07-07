@@ -1,7 +1,7 @@
 use std::io::{Cursor, Read, Seek, Write};
 use std::path::Path;
 
-use binrw::{BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, Endian, NullString, args};
+use binrw::{BinRead, BinResult, BinWrite, BinWriterExt as _, Endian, NullString, args};
 
 use crate::BffResult;
 use crate::crc::racenet32;
@@ -123,7 +123,7 @@ fn decrypt_and_decompress<R: Read>(mut reader: R) -> BffResult<Vec<u8>> {
 
     let mut encrypted_cursor = Cursor::new(encrypted_data);
     encrypted_cursor.seek(std::io::SeekFrom::End(-4))?;
-    let decompressed_size = encrypted_cursor.read_le::<u32>()? as usize;
+    let decompressed_size = binrw::BinReaderExt::read_le::<u32>(&mut encrypted_cursor)? as usize;
     let split = encrypted_cursor.stream_position()? as usize - 4;
     encrypted_cursor.seek(std::io::SeekFrom::Start(0))?;
     let compressed_data = Vec::<u8>::read_args(
@@ -140,6 +140,9 @@ fn compress_and_encrypt<W: Write>(decompressed_data: &[u8], writer: &mut W) -> B
     let decompressed_size = u32::try_from(decompressed_data.len()).unwrap();
 
     let mut compressed_data = Cursor::new(Vec::new());
+
+    // Won't match the original byte-for-byte
+    // It uses a different version or config than everything else
     lzo_compress(decompressed_data, &mut compressed_data)?;
 
     let mut payload_cursor = Cursor::new(compressed_data.into_inner());
@@ -155,8 +158,9 @@ fn compress_and_encrypt<W: Write>(decompressed_data: &[u8], writer: &mut W) -> B
 pub fn mqfel_settings_bin_extract<R: Read>(reader: R) -> BffResult<MqfelSettingsBin> {
     let decompressed_data = decrypt_and_decompress(reader)?;
     let mut decompressed_cursor = Cursor::new(decompressed_data.as_slice());
-    let root_directory = decompressed_cursor.read_le::<MqfelSettingsDirectory>()?;
-    decompressed_cursor.read_le::<u32>()?;
+    let root_directory =
+        binrw::BinReaderExt::read_le::<MqfelSettingsDirectory>(&mut decompressed_cursor)?;
+    binrw::BinReaderExt::read_le::<u32>(&mut decompressed_cursor)?;
     let consumed = decompressed_cursor.stream_position()? as usize;
     assert_eq!(
         consumed,

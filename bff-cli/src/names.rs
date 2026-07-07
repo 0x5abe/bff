@@ -1,14 +1,26 @@
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use bff::names::{NameContext, WORDLIST_ANIMALS, WORDLIST_BIP39, get_forced_hash_string};
+use bff::names::{
+    NameContext,
+    NameType,
+    WORDLIST_ANIMALS,
+    WORDLIST_BIP39,
+    get_forced_hash_string_for_type,
+};
 use bff::petgraph;
-use bff::petgraph::visit::{VisitMap, Visitable};
+use bff::petgraph::visit::{VisitMap as _, Visitable as _};
 use clap::ValueEnum;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::error::BffCliResult;
-use crate::extract::{read_bigfile, read_bigfile_names, read_in_names, write_names};
+use crate::shared::{
+    probe_bigfile_name_context,
+    read_bigfile,
+    read_bigfile_names,
+    read_in_names,
+    write_names,
+};
 
 #[derive(ValueEnum, Clone, Copy)]
 pub enum Wordlist {
@@ -18,28 +30,33 @@ pub enum Wordlist {
 }
 
 pub fn names(
-    bigfile_path: &Option<PathBuf>,
-    wordlist: &Option<Wordlist>,
-    in_names: &Vec<PathBuf>,
-    out_names: &Option<PathBuf>,
-    use_reference_graph: &bool,
+    bigfile_path: Option<&Path>,
+    name_type: Option<NameType>,
+    wordlist: Option<Wordlist>,
+    in_names: &[PathBuf],
+    out_names: Option<&Path>,
+    use_reference_graph: bool,
 ) -> BffCliResult<()> {
-    let name_context = NameContext::default();
+    let mut name_context = if let Some(bigfile_path) = bigfile_path {
+        probe_bigfile_name_context(bigfile_path, None, None)?
+    } else {
+        NameContext::new(name_type.ok_or_else(|| {
+            std::io::Error::other("`--name-type` is required when `--bigfile` is not provided")
+        })?)
+    };
     if let Some(bigfile_path) = bigfile_path {
-        read_bigfile_names(bigfile_path, &name_context)?;
+        read_bigfile_names(bigfile_path, &mut name_context)?;
     }
-    read_in_names(in_names, &name_context)?;
+    read_in_names(in_names, &mut name_context)?;
 
     if let Some(bigfile_path) = bigfile_path {
-        read_bigfile_names(bigfile_path, &name_context)?;
-
-        let bigfile = read_bigfile(bigfile_path, &None, &None, &name_context)?;
+        let bigfile = read_bigfile(bigfile_path, None, None, &name_context)?;
 
         if let Some(wordlist) = wordlist {
-            if *use_reference_graph {
+            if use_reference_graph {
                 let progress_bar = ProgressBar::new_spinner();
                 progress_bar.set_message("Generating reference graph");
-                let graph = bigfile.reference_graph();
+                let graph = bigfile.reference_graph(&name_context);
 
                 progress_bar.set_message("Finding roots");
                 let mut discovered = graph.visit_map();
@@ -70,16 +87,23 @@ pub fn names(
                         }
                     }
 
-                    let name = graph.node_weight(node).unwrap();
+                    let name = *graph.node_weight(node).unwrap();
                     let name_in_db = name_context.contains(name);
                     if !name_in_db {
                         let string = match wordlist {
                             Wordlist::Empty => "".to_owned(),
-                            Wordlist::Animals => name.get_wordlist_encoded_string(WORDLIST_ANIMALS),
-                            Wordlist::BIP39 => name.get_wordlist_encoded_string(WORDLIST_BIP39),
+                            Wordlist::Animals => name
+                                .with_context(&name_context)
+                                .get_wordlist_encoded_string(WORDLIST_ANIMALS),
+                            Wordlist::BIP39 => name
+                                .with_context(&name_context)
+                                .get_wordlist_encoded_string(WORDLIST_BIP39),
                         };
-                        let class = if let Some(resource) = bigfile.resources.get(name) {
-                            format!(".{}", resource.class_name.with_context(&name_context))
+                        let class = if let Some(bff_resource) = bigfile.bff_resource(name) {
+                            format!(
+                                ".{}",
+                                bff_resource.resource.class_name.with_context(&name_context)
+                            )
                         } else {
                             "".to_owned()
                         };
@@ -89,8 +113,9 @@ pub fn names(
                                 .unwrap()
                                 .with_context(&name_context)
                                 .to_string();
-                            let parent_string = if let Some((_, s)) =
-                                name_context.parse_forced_hash_name(&parent_name)
+                            let parent_string = if let Some((_, s)) = name_context
+                                .name_type()
+                                .parse_forced_hash_name(&parent_name)
                             {
                                 s
                             } else {
@@ -100,20 +125,33 @@ pub fn names(
                         } else {
                             format!("{}{}", string, class)
                         };
-                        name_context.insert(&get_forced_hash_string(name, name_string));
+                        name_context.insert(&get_forced_hash_string_for_type(
+                            name_context.name_type(),
+                            name,
+                            name_string,
+                        ));
                     }
                 }
             } else {
-                for resource in bigfile.resources.values() {
-                    let name = &resource.name;
-                    let class = resource.class_name.with_context(&name_context).to_string();
+                for bff_resource in bigfile.bff_resources() {
+                    let name = bff_resource.resource.name;
+                    let class = bff_resource
+                        .resource
+                        .class_name
+                        .with_context(&name_context)
+                        .to_string();
                     if !name_context.contains(name) {
                         let string = match wordlist {
                             Wordlist::Empty => "".to_owned(),
-                            Wordlist::Animals => name.get_wordlist_encoded_string(WORDLIST_ANIMALS),
-                            Wordlist::BIP39 => name.get_wordlist_encoded_string(WORDLIST_BIP39),
+                            Wordlist::Animals => name
+                                .with_context(&name_context)
+                                .get_wordlist_encoded_string(WORDLIST_ANIMALS),
+                            Wordlist::BIP39 => name
+                                .with_context(&name_context)
+                                .get_wordlist_encoded_string(WORDLIST_BIP39),
                         };
-                        name_context.insert(&get_forced_hash_string(
+                        name_context.insert(&get_forced_hash_string_for_type(
+                            name_context.name_type(),
                             name,
                             format!("{}.{}", string, class),
                         ));
@@ -123,14 +161,11 @@ pub fn names(
         }
 
         if let Some(out_names) = out_names {
-            write_names(
-                out_names,
-                &Some(bigfile.resources.keys().collect()),
-                &name_context,
-            )?;
+            let resource_names: Vec<_> = bigfile.resource_names().collect();
+            write_names(out_names, Some(resource_names.as_slice()), &name_context)?;
         }
     } else if let Some(out_names) = out_names {
-        write_names(out_names, &None, &name_context)?;
+        write_names(out_names, None, &name_context)?;
     }
 
     Ok(())

@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-use binrw::{BinRead, BinResult, BinWrite, Endian, binread, binrw, parser};
+use binrw::{BinRead as _, BinResult, BinWrite, Endian, binread, binrw, parser};
 
 use crate::BffResult;
 use crate::bigfile::BigFile;
@@ -145,8 +145,8 @@ impl<const HAS_VERSION_TRIPLE: bool, const KALISTO: bool>
 
         for block in bigfile.blocks.into_iter() {
             let mut block_resources = Vec::with_capacity(block.resources.len());
-
-            // Accessing the inner vector directly feels evil
+            resources.reserve(block.resources.len());
+            // TODO: Accessing the inner vector directly feels evil
             for resource in block.resources.inner.into_iter() {
                 block_resources.push(crate::bigfile::manifest::ManifestResource {
                     name: resource.name,

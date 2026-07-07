@@ -1,22 +1,22 @@
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::io::Write as _;
+use std::path::Path;
 
 use bff::BufReader;
 use bff::bigfile::BigFile;
-use bff::bigfile::resource::Resource;
+use bff::bigfile::resource::{Resource, ResourceData};
 use bff::names::NameContext;
 
 use crate::error::BffCliResult;
-use crate::extract::{read_bigfile, read_bigfile_names};
+use crate::shared::{probe_bigfile_name_context, read_bigfile, read_bigfile_names};
 
 struct ResolvedResource<'a> {
     link_name: Option<String>,
     resource: &'a Resource,
 }
 
-fn read_name_file(name_path: &Path, name_context: &NameContext) -> BffCliResult<()> {
+fn read_name_file(name_path: &Path, name_context: &mut NameContext) -> BffCliResult<()> {
     let f = File::open(name_path)?;
     let mut reader = BufReader::new(f);
     name_context.read(&mut reader)?;
@@ -25,14 +25,14 @@ fn read_name_file(name_path: &Path, name_context: &NameContext) -> BffCliResult<
 
 fn load_bigfile(
     bigfile_path: &Path,
-    name_path: &Option<PathBuf>,
+    name_path: Option<&Path>,
 ) -> BffCliResult<(BigFile, NameContext)> {
-    let name_context = NameContext::default();
-    read_bigfile_names(bigfile_path, &name_context)?;
+    let mut name_context = probe_bigfile_name_context(bigfile_path, None, None)?;
+    read_bigfile_names(bigfile_path, &mut name_context)?;
     if let Some(name_path) = name_path {
-        read_name_file(name_path, &name_context)?;
+        read_name_file(name_path, &mut name_context)?;
     }
-    let bigfile = read_bigfile(bigfile_path, &None, &None, &name_context)?;
+    let bigfile = read_bigfile(bigfile_path, None, None, &name_context)?;
     Ok((bigfile, name_context))
 }
 
@@ -43,16 +43,25 @@ fn resolve_resources<'a>(
 ) -> BffCliResult<BTreeMap<String, ResolvedResource<'a>>> {
     let mut resources = BTreeMap::new();
 
-    for resource in bigfile.resources.values() {
-        let resource_name = resource.name.with_context(name_context).to_string();
-        let class_name = resource.class_name.with_context(name_context).to_string();
+    for bff_resource in bigfile.bff_resources() {
+        let resource_name = bff_resource
+            .resource
+            .name
+            .with_context(name_context)
+            .to_string();
+        let class_name = bff_resource
+            .resource
+            .class_name
+            .with_context(name_context)
+            .to_string();
         let full_name = format!("{resource_name}.{class_name}");
         let resolved_resource = ResolvedResource {
-            link_name: resource
+            link_name: bff_resource
+                .resource
                 .link_name
                 .as_ref()
                 .map(|name| name.with_context(name_context).to_string()),
-            resource,
+            resource: bff_resource.resource,
         };
 
         assert!(
@@ -66,18 +75,61 @@ fn resolve_resources<'a>(
     Ok(resources)
 }
 
-fn display_link_name(link_name: &Option<String>) -> &str {
-    link_name.as_deref().unwrap_or("<none>")
+fn display_link_name(link_name: Option<&str>) -> &str {
+    link_name.unwrap_or("<none>")
+}
+
+fn describe_size_change(label: &str, old_size: usize, new_size: usize) -> String {
+    if old_size == new_size {
+        format!("{label} changed ({old_size} bytes)")
+    } else {
+        format!("{label}: {old_size} -> {new_size} bytes")
+    }
+}
+
+fn describe_split_part_size_change(label: &str, old_size: usize, new_size: usize) -> String {
+    if old_size == new_size {
+        format!("{label}: {old_size} bytes")
+    } else {
+        format!("{label}: {old_size} -> {new_size} bytes")
+    }
 }
 
 fn describe_data_change(old_resource: &Resource, new_resource: &Resource) -> String {
-    let old_size = old_resource.size();
-    let new_size = new_resource.size();
-
-    if old_size == new_size {
-        format!("data changed ({old_size} bytes)")
-    } else {
-        format!("data: {old_size} -> {new_size} bytes")
+    match (&old_resource.data, &new_resource.data) {
+        (ResourceData::Data(old_data), ResourceData::Data(new_data)) => {
+            describe_size_change("data", old_data.len(), new_data.len())
+        }
+        (
+            ResourceData::SplitData {
+                link_header: old_link_header,
+                body: old_body,
+            },
+            ResourceData::SplitData {
+                link_header: new_link_header,
+                body: new_body,
+            },
+        ) => format!(
+            "split data ({}, {})",
+            describe_split_part_size_change(
+                "link_header",
+                old_link_header.len(),
+                new_link_header.len()
+            ),
+            describe_split_part_size_change("body", old_body.len(), new_body.len())
+        ),
+        (ResourceData::Data(old_data), ResourceData::SplitData { link_header, body }) => format!(
+            "data format: Data ({} bytes) -> SplitData (link_header: {} bytes, body: {} bytes)",
+            old_data.len(),
+            link_header.len(),
+            body.len()
+        ),
+        (ResourceData::SplitData { link_header, body }, ResourceData::Data(new_data)) => format!(
+            "data format: SplitData (link_header: {} bytes, body: {} bytes) -> Data ({} bytes)",
+            link_header.len(),
+            body.len(),
+            new_data.len()
+        ),
     }
 }
 
@@ -90,8 +142,8 @@ fn describe_changes(
     if old_resource.link_name != new_resource.link_name {
         changes.push(format!(
             "link: {} -> {}",
-            display_link_name(&old_resource.link_name),
-            display_link_name(&new_resource.link_name)
+            display_link_name(old_resource.link_name.as_deref()),
+            display_link_name(new_resource.link_name.as_deref())
         ));
     }
 
@@ -108,8 +160,8 @@ fn describe_changes(
 pub fn diff(
     old_bigfile_path: &Path,
     new_bigfile_path: &Path,
-    old_name_path: &Option<PathBuf>,
-    new_name_path: &Option<PathBuf>,
+    old_name_path: Option<&Path>,
+    new_name_path: Option<&Path>,
 ) -> BffCliResult<()> {
     let (old_bigfile, old_name_context) = load_bigfile(old_bigfile_path, old_name_path)?;
     let (new_bigfile, new_name_context) = load_bigfile(new_bigfile_path, new_name_path)?;

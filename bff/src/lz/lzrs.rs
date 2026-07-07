@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use binrw::{BinReaderExt, BinResult, BinWriterExt, Endian};
+use binrw::{BinResult, BinWriterExt as _, Endian};
 
 use crate::BffResult;
 
@@ -11,8 +11,8 @@ pub fn lzrs_decompress_body_parser(
     compressed_size: u32,
 ) -> BinResult<Vec<u8>> {
     // These fields are little endian even on big endian platforms.
-    let read_decompressed_size = reader.read_le::<u32>()?;
-    let read_compressed_size = reader.read_le::<u32>()?;
+    let read_decompressed_size = binrw::BinReaderExt::read_le::<u32>(reader)?;
+    let read_compressed_size = binrw::BinReaderExt::read_le::<u32>(reader)?;
 
     // Ensure the values from the resource header match the values
     // in the compressed data.
@@ -44,8 +44,8 @@ pub fn lzrs_decompress_body_parser(
 #[binrw::parser(reader, endian)]
 pub fn lzrs_decompress_data_with_header_parser_internal() -> BinResult<Vec<u8>> {
     // These fields are little endian even on big endian platforms.
-    let decompressed_size = reader.read_le::<u32>()?;
-    let compressed_size = reader.read_le::<u32>()?;
+    let decompressed_size = binrw::BinReaderExt::read_le::<u32>(reader)?;
+    let compressed_size = binrw::BinReaderExt::read_le::<u32>(reader)?;
 
     lzrs_decompress_data_parser(reader, endian, (decompressed_size, compressed_size - 8))
 }
@@ -72,14 +72,14 @@ pub fn lzrs_decompress_data_parser(
     let mut decompressed_buffer: Vec<u8> = Vec::new();
 
     loop {
-        let mut flags = reader.read_be::<u32>()?;
+        let mut flags = binrw::BinReaderExt::read_be::<u32>(reader)?;
         let len = (flags & 0b11) as u16;
         let temp_shift = WINDOW_LOG - len;
         let temp_mask = WINDOW_MASK >> len;
 
         for _ in 0..30 {
             if (flags & 0x80000000) != 0 {
-                let temp = reader.read_be::<u16>()?;
+                let temp = binrw::BinReaderExt::read_be::<u16>(reader)?;
                 let start = decompressed_buffer.len() - (temp & temp_mask) as usize - 1;
                 let end = start + (temp >> temp_shift) as usize + 3;
 
@@ -89,7 +89,7 @@ pub fn lzrs_decompress_data_parser(
                     decompressed_buffer.push(decompressed_buffer[i]);
                 }
             } else {
-                decompressed_buffer.push(reader.read_be::<u8>()?);
+                decompressed_buffer.push(binrw::BinReaderExt::read_be::<u8>(reader)?);
             }
 
             if decompressed_buffer.len() >= decompressed_size as usize {
@@ -145,7 +145,7 @@ struct Packet {
 }
 
 impl Packet {
-    fn with_match_length(match_length: i32) -> Self {
+    const fn with_match_length(match_length: i32) -> Self {
         Self {
             match_length,
             total_length: 0,
@@ -153,7 +153,7 @@ impl Packet {
         }
     }
 
-    fn reset_total_length(&mut self) {
+    const fn reset_total_length(&mut self) {
         self.total_length = 0;
     }
 }
@@ -166,14 +166,14 @@ struct Match {
 }
 
 // Detach node from previous
-fn split_off(matches: &mut [Match], node: usize) {
+const fn split_off(matches: &mut [Match], node: usize) {
     let prev = matches[node].prev.unwrap();
     matches[prev].next = None;
     matches[node].prev = None;
 }
 
 // Insert node between target and target.prev
-fn insert_before(matches: &mut [Match], target: usize, node: usize) {
+const fn insert_before(matches: &mut [Match], target: usize, node: usize) {
     let target_prev = matches[target].prev;
     matches[node].prev = target_prev;
     if let Some(prev) = target_prev {

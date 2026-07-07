@@ -11,7 +11,7 @@ use crate::names::{Name, NameContext};
 
 const DEFAULT_CPS_IN_NAMES: &str = include_str!("ALLSCRIPTS.CPSNameWii");
 
-pub fn read_default_cps_names(name_context: &NameContext) -> BffResult<()> {
+pub fn read_default_cps_names(name_context: &mut NameContext) -> BffResult<()> {
     let mut reader = crate::BufReader::new(Cursor::new(DEFAULT_CPS_IN_NAMES.as_bytes()));
     name_context.read(&mut reader)?;
     Ok(())
@@ -188,7 +188,7 @@ fn encode_cps_script<W: Write + Seek>(
     script: &str,
     writer: &mut W,
     endian: Endian,
-    name_context: &NameContext,
+    name_context: &mut NameContext,
 ) -> BinResult<()> {
     let start = writer.stream_position()?;
     let mut num_lines: u32 = 0;
@@ -214,7 +214,10 @@ fn encode_cps_script<W: Write + Seek>(
         if command_name_token.contains('%') {
             eprintln!("ERROR: Command names should not use '%': {command_name_token}");
         }
-        let command_name = name_context.parse_i32_or_hash_name(&command_name_token);
+        let command_name = name_context
+            .name_type()
+            .parse_name_value(&command_name_token)
+            .unwrap_or_else(|| name_context.insert(&command_name_token));
         let mut params: Vec<Param> = Vec::with_capacity(args.len().saturating_sub(1));
         for param_token in args.into_iter().skip(1) {
             let upper = param_token.to_ascii_uppercase();
@@ -263,7 +266,7 @@ impl BinRead for Cps {
 
         for _ in 0..script_count {
             let name = name_context.scope(|| Name::read_options(reader, endian, ()))?;
-            let has_name_string = name_context.resolve(&name).is_some();
+            let has_name_string = name_context.resolve(name).is_some();
             let uncompressed_size = u32::read_options(reader, endian, ())?;
             let compressed_size = u32::read_options(reader, endian, ())?;
             let offset_in_bigfile = u32::read_options(reader, endian, ())?;
@@ -293,7 +296,7 @@ impl BinRead for Cps {
 }
 
 impl BinWrite for Cps {
-    type Args<'a> = (&'a NameContext,);
+    type Args<'a> = (&'a mut NameContext,);
 
     fn write_options<W: Write + Seek>(
         &self,
@@ -332,12 +335,18 @@ impl BinWrite for Cps {
 
                 let name = if is_bare_numeric_tsc {
                     let stem = path.file_stem().and_then(|stem| stem.to_str()).unwrap();
-                    name_context.parse_i32_or_hash_name(stem)
+                    name_context
+                        .name_type()
+                        .parse_name_value(stem)
+                        .unwrap_or_else(|| name_context.insert(stem))
                 } else {
-                    name_context.parse_i32_or_hash_name(path_string.as_ref())
+                    name_context
+                        .name_type()
+                        .parse_name_value(path_string.as_ref())
+                        .unwrap_or_else(|| name_context.insert(path_string.as_ref()))
                 };
                 // Sort by unsigned hash value for deterministic CPS ordering.
-                let sort_key = name.get_value() as u64;
+                let sort_key = name.as_raw();
                 (sort_key, name, path, script)
             })
             .collect::<Vec<_>>();
@@ -372,7 +381,7 @@ const CPS_VERSION: &[u8; 8] = b"OPAL_1.0";
 const CPS_FIRST_CHAR: u8 = b'O';
 const CPS_SEED_STEP: u8 = 37;
 
-#[allow(clippy::unbuffered_bytes)]
+#[expect(clippy::unbuffered_bytes)]
 pub fn cps_copy<R: Read, W: Write>(reader: R, writer: &mut W) -> BffResult<()> {
     let mut seed = CPS_FIRST_CHAR;
     for byte in reader.bytes() {
@@ -392,7 +401,6 @@ pub fn cps_buffer(data: &mut [u8]) {
     }
 }
 
-#[allow(clippy::unbuffered_bytes)]
 #[binrw::parser(reader)]
 fn cps_crypt() -> BinResult<Vec<u8>> {
     let mut data = Vec::new();
@@ -432,7 +440,7 @@ impl Cps {
         writer: &mut W,
         endian: Endian,
         unencrypted: bool,
-        name_context: &NameContext,
+        name_context: &mut NameContext,
     ) -> BffResult<()> {
         if unencrypted {
             <Self as BinWrite>::write_options(self, writer, endian, (name_context,))?;

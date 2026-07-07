@@ -1,31 +1,30 @@
 use std::fs::File;
-use std::io::{self, BufWriter, Write};
+use std::io::{self, BufWriter, Write as _};
 use std::path::{Path, PathBuf};
 
-use bff::names::NameContext;
 use bff::petgraph::dot::{Config, Dot};
 
 use crate::error::BffCliResult;
-use crate::extract::{read_bigfile, read_bigfile_names, read_in_names};
+use crate::shared::{probe_bigfile_name_context, read_bigfile, read_bigfile_names, read_in_names};
 
 pub fn info(
     bigfile_path: &Path,
-    in_names: &Vec<PathBuf>,
-    out_reference_graph: &Option<PathBuf>,
+    in_names: &[PathBuf],
+    out_reference_graph: Option<&Path>,
 ) -> BffCliResult<()> {
-    let name_context = NameContext::default();
-    read_bigfile_names(bigfile_path, &name_context)?;
-    read_in_names(in_names, &name_context)?;
+    let mut name_context = probe_bigfile_name_context(bigfile_path, None, None)?;
+    read_bigfile_names(bigfile_path, &mut name_context)?;
+    read_in_names(in_names, &mut name_context)?;
 
-    let bigfile = read_bigfile(bigfile_path, &None, &None, &name_context)?;
-    bff::names::json::to_writer_pretty(io::stdout().lock(), &bigfile, &name_context)?;
+    let bigfile = read_bigfile(bigfile_path, None, None, &name_context)?;
+    bff::names::json::to_writer_pretty(io::stdout().lock(), bigfile.manifest(), &name_context)?;
 
     if let Some(out_dependencies) = out_reference_graph {
         let f = File::create(out_dependencies)?;
         let mut writer = BufWriter::new(f);
-        let graph = bigfile.reference_graph();
+        let graph = bigfile.reference_graph(&name_context);
         let dot = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
-        write!(&mut writer, "{:?}", dot)?;
+        name_context.scope(|| write!(&mut writer, "{:?}", dot))?;
     }
 
     Ok(())

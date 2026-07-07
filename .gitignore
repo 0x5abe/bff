@@ -18,12 +18,11 @@
 # data
 /data/
 
-# bff-gui
-/bff-gui/dist/
-/bff-gui/node_modules/
-
 # cargo flamegraph
 /flamegraph.svg
 
 # compile profiling outputs
 /.compile-profile/
+
+# cargo workspace-unused-pub
+/index.scip

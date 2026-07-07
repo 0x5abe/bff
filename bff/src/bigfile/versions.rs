@@ -6,10 +6,8 @@ use scanf::sscanf;
 use schemars::schema::Schema;
 use schemars::{JsonSchema, SchemaGenerator};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_context::context_scope;
 
 use crate::helpers::PascalString;
-use crate::names::{DeserializeNamesContext, SerializeNamesContext};
 
 #[derive(Debug, Display, Clone, Eq, PartialEq, BinRead, BinWrite)]
 pub enum Version {
@@ -35,7 +33,7 @@ pub enum Version {
     #[brw(magic = 3u8)]
     // The space is intentional :(
     // This format is used in Shaun White Snowboarding: World Stage by Ubisoft as well
-    #[display("Bigfile Data v{}.{} ", _0, _1)]
+    #[display("Bigfile Data v{}.{:02} ", _0, _1)]
     BlackSheep(u16, u16),
     #[brw(magic = 4u8)]
     // Used in The Mighty Quest for Epic Loot by Ubisoft
@@ -67,7 +65,7 @@ pub enum Version {
 }
 
 impl Version {
-    pub fn size_on_disk(&self) -> u16 {
+    pub const fn size_on_disk(&self) -> u16 {
         1 + match self {
             Self::Asobo(_, _, _, _) => 2 * 4,
             Self::AsoboLegacy(_, _) => 2 * 2,
@@ -137,13 +135,6 @@ impl From<&str> for Version {
 
 impl Serialize for Version {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if let Ok(name_type) = self.try_into() {
-            context_scope(|cx| {
-                if let Ok(names_context) = cx.get::<SerializeNamesContext>() {
-                    names_context.set_name_type(name_type);
-                }
-            });
-        }
         serializer.serialize_str(&self.to_string())
     }
 }
@@ -151,15 +142,7 @@ impl Serialize for Version {
 impl<'de> Deserialize<'de> for Version {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let string = String::deserialize(deserializer)?;
-        let version: Self = string.as_str().into();
-        if let Ok(name_type) = (&version).try_into() {
-            context_scope(|cx| {
-                if let Ok(names_context) = cx.get::<DeserializeNamesContext>() {
-                    names_context.set_name_type(name_type);
-                }
-            });
-        }
-        Ok(version)
+        Ok(string.as_str().into())
     }
 }
 

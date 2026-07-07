@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use bff::bigfile::platforms::Platform;
 use bff::bigfile::versions::Version;
+use bff::names::NameType;
 use clap::*;
 use crc::{CrcAlgorithm, CrcFormat, CrcMode};
 use crypt::CryptAlgorithm;
@@ -27,8 +28,8 @@ mod lz;
 mod mqfel_settings_bin;
 mod names;
 mod psc;
+mod shared;
 mod stdio_or_path;
-mod try_your_best;
 
 use mimalloc::MiMalloc;
 use shadow_rs::shadow;
@@ -115,6 +116,8 @@ enum Commands {
     },
     Names {
         bigfile: Option<PathBuf>,
+        #[arg(long)]
+        name_type: Option<NameType>,
         #[clap(value_enum)]
         #[arg(short, long)]
         wordlist: Option<Wordlist>,
@@ -153,6 +156,12 @@ enum Commands {
         #[clap(value_enum)]
         #[arg(short, long)]
         algorithm: LzAlgorithm,
+        #[arg(
+            long,
+            default_value_t = lz::DEFAULT_DECOMPRESSED_BUFFER_SIZE,
+            help = "Only used by lzo. Size in bytes of the decompression buffer"
+        )]
+        buffer_size: usize,
     },
     Lz {
         uncompressed: StdioOrPath,
@@ -252,8 +261,6 @@ enum Commands {
         fat: PathBuf,
         lin: PathBuf,
     },
-    #[clap(alias = "tyb")]
-    TryYourBest { path: PathBuf },
     #[clap(alias = "djs")]
     DumpJsonSchema { path: PathBuf },
 }
@@ -268,7 +275,7 @@ struct Args {
 fn main() -> BffCliResult<()> {
     let cli = Args::parse();
 
-    match &cli.command {
+    match cli.command {
         Commands::Extract {
             bigfile,
             directory,
@@ -278,13 +285,13 @@ fn main() -> BffCliResult<()> {
             export_strategy,
             rich_suffix,
         } => extract::extract(
-            bigfile,
-            directory,
-            in_names,
+            &bigfile,
+            &directory,
+            &in_names,
             platform_override,
-            version_override,
+            version_override.as_ref(),
             export_strategy,
-            rich_suffix,
+            &rich_suffix,
         ),
         Commands::Create {
             directory,
@@ -295,13 +302,13 @@ fn main() -> BffCliResult<()> {
             version_to_write,
             tag,
         } => create::create(
-            directory,
-            bigfile,
-            out_names,
+            &directory,
+            &bigfile,
+            out_names.as_deref(),
             platform_override,
-            version_override,
-            version_to_write,
-            tag,
+            version_override.as_ref(),
+            version_to_write.as_ref(),
+            tag.as_deref(),
         ),
         Commands::ExtractResource {
             resource,
@@ -310,11 +317,11 @@ fn main() -> BffCliResult<()> {
             platform_override,
             version_override,
         } => extract_resource::extract_resource(
-            resource,
-            directory,
-            in_names,
+            &resource,
+            &directory,
+            &in_names,
             platform_override,
-            version_override,
+            version_override.as_ref(),
         ),
         Commands::CreateResource {
             directory,
@@ -323,43 +330,57 @@ fn main() -> BffCliResult<()> {
             platform_override,
             version_override,
         } => create_resource::create_resource(
-            directory,
-            resource,
-            out_names,
+            &directory,
+            &resource,
+            out_names.as_deref(),
             platform_override,
-            version_override,
+            version_override.as_ref(),
         ),
         Commands::Info {
             bigfile,
             in_names,
             out_reference_graph: out_dependencies,
-        } => info::info(bigfile, in_names, out_dependencies),
+        } => info::info(&bigfile, &in_names, out_dependencies.as_deref()),
         Commands::Diff {
             old_bigfile,
             new_bigfile,
             old_names,
             new_names,
-        } => diff::diff(old_bigfile, new_bigfile, old_names, new_names),
+        } => diff::diff(
+            &old_bigfile,
+            &new_bigfile,
+            old_names.as_deref(),
+            new_names.as_deref(),
+        ),
         Commands::Names {
             bigfile,
+            name_type,
             wordlist,
             in_names,
             out_names,
             use_reference_graph,
-        } => names::names(bigfile, wordlist, in_names, out_names, use_reference_graph),
+        } => names::names(
+            bigfile.as_deref(),
+            name_type,
+            wordlist,
+            &in_names,
+            out_names.as_deref(),
+            use_reference_graph,
+        ),
         Commands::Crc {
             string,
             starting,
             algorithm,
             mode,
             format,
-        } => crc::crc(string, starting, algorithm, mode, format),
+        } => crc::crc(string.as_deref(), starting, algorithm, mode, format),
         Commands::Unlz {
             compressed,
             uncompressed,
             endian,
             algorithm,
-        } => lz::unlz(compressed, uncompressed, endian, algorithm),
+            buffer_size,
+        } => lz::unlz(compressed, uncompressed, endian, algorithm, buffer_size),
         Commands::Lz {
             uncompressed,
             compressed,
@@ -382,44 +403,43 @@ fn main() -> BffCliResult<()> {
             psc,
             directory,
             algorithm,
-        } => psc::extract_psc(psc, directory, algorithm),
+        } => psc::extract_psc(&psc, &directory, algorithm),
         Commands::CreatePsc {
             directory,
             psc,
             algorithm,
-        } => psc::create_psc(directory, psc, algorithm),
+        } => psc::create_psc(&directory, &psc, algorithm),
         Commands::ExtractCps {
             cps,
             directory,
             in_names,
             endian,
-        } => cps::extract_cps(cps, directory, in_names, endian),
+        } => cps::extract_cps(&cps, &directory, &in_names, endian),
         Commands::CreateCps {
             directory,
             cps,
             out_names,
             endian,
             unencrypted,
-        } => cps::create_cps(directory, cps, out_names, endian, unencrypted),
+        } => cps::create_cps(&directory, &cps, out_names.as_deref(), endian, unencrypted),
         Commands::ExtractMqfelSettingsBin {
             settings_bin,
             directory,
-        } => mqfel_settings_bin::extract_mqfel_settings_bin(settings_bin, directory),
+        } => mqfel_settings_bin::extract_mqfel_settings_bin(&settings_bin, &directory),
         Commands::CreateMqfelSettingsBin {
             directory,
             settings_bin,
-        } => mqfel_settings_bin::create_mqfel_settings_bin(directory, settings_bin),
+        } => mqfel_settings_bin::create_mqfel_settings_bin(&directory, &settings_bin),
         Commands::ExtractFatLin {
             fat,
             lin,
             directory,
-        } => fat_lin::extract_fat_lin(fat, lin, directory),
+        } => fat_lin::extract_fat_lin(&fat, &lin, &directory),
         Commands::CreateFatLin {
             directory,
             fat,
             lin,
-        } => fat_lin::create_fat_lin(directory, fat, lin),
-        Commands::TryYourBest { path } => try_your_best::try_your_best(path),
-        Commands::DumpJsonSchema { path } => dump_json_schema::dump_json_schema(path),
+        } => fat_lin::create_fat_lin(&directory, &fat, &lin),
+        Commands::DumpJsonSchema { path } => dump_json_schema::dump_json_schema(&path),
     }
 }

@@ -5,6 +5,7 @@ use derive_more::{Constructor, Display, Error, From};
 use crate::bigfile::platforms::{Platform, Style};
 use crate::bigfile::versions::Version;
 use crate::class::ClassType;
+use crate::lz::LzoError;
 use crate::names::Name;
 
 #[derive(Debug, Constructor, Display, Error)]
@@ -18,17 +19,6 @@ use crate::names::Name;
 pub struct UnimplementedClassError {
     pub resource_name: Name,
     pub class_name: Name,
-    pub version: Version,
-    pub platform: Platform,
-}
-
-#[derive(Debug, Constructor, Display, Error)]
-#[display(
-    "Unsupported BigFile version, platform combination: {}, {}",
-    version,
-    platform
-)]
-pub struct UnimplementedVersionPlatformError {
     pub version: Version,
     pub platform: Platform,
 }
@@ -56,6 +46,18 @@ pub struct InvalidPlatformStyleError {
 #[display("Missing cooked source resource {}", name)]
 pub struct MissingSourceResourceError {
     pub name: Name,
+}
+
+#[derive(Debug, Constructor, Display, Error)]
+#[display("Invalid name decoding: {reason}")]
+pub struct InvalidNameDecodingError {
+    pub reason: String,
+}
+
+#[derive(Debug, Constructor, Display, Error)]
+#[display("Invalid name encoding: {reason}")]
+pub struct InvalidNameEncodingError {
+    pub reason: String,
 }
 
 #[derive(Debug, Constructor, Display, Error)]
@@ -90,17 +92,28 @@ pub struct UnsupportedSourceFlagError {
     pub flag: String,
 }
 
+#[derive(Debug, Constructor, Display, Error)]
+#[display(
+    "Invalid FAT entry at line {line_number}: expected `<path> <offset> <size>`, got `{line}`"
+)]
+pub struct InvalidFatEntryError {
+    pub line_number: usize,
+    pub line: String,
+}
+
 #[derive(Debug, Display, Error, From)]
 pub enum Error {
     BinRW(binrw::Error),
     Fmt(std::fmt::Error),
     InvalidExtension(InvalidExtensionError),
+    InvalidFatEntry(InvalidFatEntryError),
+    InvalidNameDecoding(InvalidNameDecodingError),
+    InvalidNameEncoding(InvalidNameEncodingError),
     InvalidPlatformStyle(InvalidPlatformStyleError),
     Io(std::io::Error),
     ParseInt(std::num::ParseIntError),
     UnimplementedClass(UnimplementedClassError),
     UnimplementedVersion(UnimplementedVersionError),
-    UnimplementedVersionPlatform(UnimplementedVersionPlatformError),
     Utf8(std::string::FromUtf8Error),
     UnimplementedImportExport,
     ImportBadArtifact,
@@ -110,4 +123,5 @@ pub enum Error {
     UnsupportedSourceVariant(UnsupportedSourceVariantError),
     UnknownSourceFlags(UnknownSourceFlagsError),
     UnsupportedSourceFlag(UnsupportedSourceFlagError),
+    LzoError(LzoError),
 }

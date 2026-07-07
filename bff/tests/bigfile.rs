@@ -3,24 +3,42 @@ use std::fs::{self, File};
 use std::io::Cursor;
 
 use bff::bigfile::BigFile;
-use bff::bigfile::resource::{BffClass, BffResourceHeader, Resource};
-use bff::class::Class;
+use bff::bigfile::platforms::Platform;
+use bff::bigfile::resource::Resource;
+use bff::bigfile::versions::Version;
+use bff::class::bff_class::BffClass;
 use bff::names::NameContext;
-use bff::traits::{Export, Import, TryIntoVersionPlatform};
+use bff::traits::{Export as _, Import as _, ToResource as _};
 use binrw::io::BufReader;
 
 use crate::path_helpers::resolve_bigfile_path;
 
 fn assert_no_missing_class_names(bigfile: &BigFile, name_context: &NameContext) {
-    for (i, resource) in bigfile.resources.values().enumerate() {
-        let resource_name = resource.name.with_context(name_context).to_string();
-        let class_name = resource.class_name.with_context(name_context).to_string();
+    for (i, bff_resource) in bigfile.bff_resources().enumerate() {
+        let resource_name = bff_resource
+            .resource
+            .name
+            .with_context(name_context)
+            .to_string();
+        let class_name = bff_resource
+            .resource
+            .class_name
+            .with_context(name_context)
+            .to_string();
 
         assert!(
-            name_context.contains(&resource.class_name),
+            name_context.contains(bff_resource.resource.class_name),
             "missing class name for resource {i} {resource_name}: {class_name}",
         );
     }
+}
+
+fn probe_name_context<R: std::io::Read + std::io::Seek>(
+    reader: &mut R,
+    platform: Platform,
+) -> NameContext {
+    let name_type = BigFile::probe_name_type_platform(reader, platform, None).unwrap();
+    NameContext::new(name_type)
 }
 
 #[datatest::data("tests/datasets/bigfile_read.yaml")]
@@ -30,8 +48,8 @@ fn read(bigfile_path_str: String) {
     let platform = bigfile_path.extension().unwrap().try_into().unwrap();
     let f = File::open(bigfile_path).unwrap();
     let mut reader = BufReader::new(f);
-    let name_context = NameContext::default();
-    let bigfile = BigFile::read_platform(&mut reader, platform, &None, &name_context).unwrap();
+    let name_context = probe_name_context(&mut reader, platform);
+    let bigfile = BigFile::read_platform(&mut reader, platform, None, &name_context).unwrap();
     assert_no_missing_class_names(&bigfile, &name_context);
 }
 
@@ -42,39 +60,50 @@ fn roundtrip_resources(bigfile_path_str: String) {
     let platform = bigfile_path.extension().unwrap().try_into().unwrap();
     let f = File::open(bigfile_path).unwrap();
     let mut reader = BufReader::new(f);
-    let name_context = NameContext::default();
-    let bigfile = BigFile::read_platform(&mut reader, platform, &None, &name_context).unwrap();
-    let version = bigfile.manifest.version.clone();
+    let mut name_context = probe_name_context(&mut reader, platform);
+    let bigfile = BigFile::read_platform(&mut reader, platform, None, &name_context).unwrap();
+    let version = &bigfile.manifest().version;
 
-    for resource in bigfile.resources.values() {
-        let class: Class = resource
-            .try_into_version_platform(version.clone(), platform)
-            .unwrap();
-        let bff_class = BffClass {
-            header: BffResourceHeader {
-                platform,
-                version: version.clone(),
-            },
-            class,
-        };
+    for bff_resource in bigfile.bff_resources() {
+        let bff_class = bff_resource.bff_class(&name_context).unwrap();
         let resource_serialized =
             bff::names::json::to_string_pretty(&bff_class, &name_context).unwrap();
         let mut roundtripped_bff_class: BffClass = bff::names::json::from_reader(
             Cursor::new(resource_serialized.into_bytes()),
-            &name_context,
+            &mut name_context,
         )
         .unwrap();
         let artifacts = bff_class.class.export().unwrap_or_else(|_| HashMap::new());
         let _ = roundtripped_bff_class.class.import(&artifacts);
 
-        let new_resource: Resource = (&roundtripped_bff_class.class)
-            .try_into_version_platform(version.clone(), platform)
+        let new_resource: Resource = roundtripped_bff_class
+            .class
+            .to_resource(version, platform, &name_context)
             .unwrap();
-        let resource_name = resource.name.with_context(&name_context).to_string();
-        let class_name = resource.class_name.with_context(&name_context).to_string();
+        let resource_name = bff_resource
+            .resource
+            .name
+            .with_context(&name_context)
+            .to_string();
+        let class_name = bff_resource
+            .resource
+            .class_name
+            .with_context(&name_context)
+            .to_string();
 
-        assert!(new_resource == *resource, "{resource_name}.{class_name}");
+        assert!(
+            new_resource == *bff_resource.resource,
+            "{resource_name}.{class_name}"
+        );
     }
+}
+
+#[datatest::data("tests/datasets/bigfile_roundtrip_versions.yaml")]
+#[test]
+fn roundtrip_versions(version_str: String) {
+    let version = Version::from(version_str.as_str());
+
+    assert_eq!(version.to_string(), version_str);
 }
 
 #[datatest::data("tests/datasets/bigfile_roundtrip.yaml")]
@@ -84,13 +113,13 @@ fn roundtrip(bigfile_path_str: String) {
     let platform = bigfile_path.extension().unwrap().try_into().unwrap();
     let data = fs::read(bigfile_path).unwrap();
     let mut reader = Cursor::new(&data);
-    let name_context = NameContext::default();
-    let bigfile = BigFile::read_platform(&mut reader, platform, &None, &name_context).unwrap();
+    let name_context = probe_name_context(&mut reader, platform);
+    let bigfile = BigFile::read_platform(&mut reader, platform, None, &name_context).unwrap();
     assert_no_missing_class_names(&bigfile, &name_context);
 
     let mut writer = Cursor::new(Vec::new());
     bigfile
-        .write(&mut writer, None, &None, &None, None, &name_context)
+        .write(&mut writer, None, None, None, None, &name_context)
         .unwrap();
 
     assert!(data == writer.into_inner());
@@ -103,16 +132,16 @@ fn read_write_read(bigfile_path_str: String) {
     let platform = bigfile_path.extension().unwrap().try_into().unwrap();
     let f = File::open(bigfile_path).unwrap();
     let mut reader = BufReader::new(f);
-    let name_context = NameContext::default();
-    let bigfile = BigFile::read_platform(&mut reader, platform, &None, &name_context).unwrap();
+    let name_context = probe_name_context(&mut reader, platform);
+    let bigfile = BigFile::read_platform(&mut reader, platform, None, &name_context).unwrap();
     assert_no_missing_class_names(&bigfile, &name_context);
 
     let mut writer = Cursor::new(Vec::new());
     bigfile
-        .write(&mut writer, None, &None, &None, None, &name_context)
+        .write(&mut writer, None, None, None, None, &name_context)
         .unwrap();
     let mut reader = Cursor::new(writer.into_inner());
-    let name_context = NameContext::default();
-    let bigfile2 = BigFile::read_platform(&mut reader, platform, &None, &name_context).unwrap();
+    let name_context = probe_name_context(&mut reader, platform);
+    let bigfile2 = BigFile::read_platform(&mut reader, platform, None, &name_context).unwrap();
     assert!(bigfile == bigfile2);
 }

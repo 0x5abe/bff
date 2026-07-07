@@ -15,6 +15,9 @@ fmt:
 clippy:
     cargo +nightly clippy --tests
 
+check:
+    cargo +nightly check --tests
+
 deny:
     cargo deny check
 
@@ -42,7 +45,7 @@ install:
 install-dev-deps:
     rustup install nightly
     rustup update nightly
-    cargo install --locked cargo-sort flamegraph cargo-deny zizmor cargo-machete
+    cargo install --locked cargo-sort flamegraph cargo-deny zizmor cargo-machete cargo-workspace-unused-pub
     cargo install --locked --git https://github.com/rust-lang/measureme summarize
     {{ if os() == 'windows' { 'cargo install --locked blondie' } else { '' } }}
 
@@ -126,14 +129,15 @@ profile-compile *TARGET:
     Write-Output "Wrote compile profile artifacts to $out"
 
 zizmor:
-    zizmor --persona auditor --collect all -- .github/workflows/build-wasm.yml .github/workflows/build.yml .github/workflows/nightly-release.yml .github/workflows/release.yml
+    zizmor --persona auditor --strict-collection .github/workflows
 
 machete:
     cargo machete
 
-flint: fmt clippy deny zizmor machete
+unused:
+    cargo workspace-unused-pub
 
-check: flint test
+flint: fmt clippy check deny zizmor machete
 
 clean:
     cargo clean

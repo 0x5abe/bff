@@ -2,12 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use crate::bigfile::BigFile;
 use crate::bigfile::dependency::DependencyIndex;
-use crate::bigfile::resource::{BffClass, BffResourceHeader, Resource};
-use crate::class::{Class, ClassType};
-use crate::names::Name;
+use crate::class::ClassType;
+use crate::class::bff_class::BffClass;
+use crate::names::{Name, NameContext};
 use crate::source::asset::{SourceAsset, SourceAssetBuildFailure, build_source_assets};
 use crate::source::context::UncookContext;
-use crate::traits::{ReferencedNames, TryIntoVersionPlatform};
+use crate::traits::ReferencedNames as _;
 
 pub struct SourceProject {
     pub assets: Vec<SourceAsset>,
@@ -16,9 +16,11 @@ pub struct SourceProject {
 }
 
 impl SourceProject {
-    pub fn from_bigfile(bigfile: &BigFile) -> Self {
-        let project = CookedProject::from_bigfile(bigfile);
-        Self::from_cooked_project(&project)
+    pub fn from_bigfile(bigfile: &BigFile, name_context: &NameContext) -> Self {
+        name_context.scope(|| {
+            let project = CookedProject::from_bigfile(bigfile, name_context);
+            Self::from_cooked_project(&project)
+        })
     }
 
     pub fn from_cooked_project(project: &CookedProject) -> Self {
@@ -41,33 +43,25 @@ pub struct CookedProject {
 }
 
 impl CookedProject {
-    pub fn from_bigfile(bigfile: &BigFile) -> Self {
+    pub fn from_bigfile(bigfile: &BigFile, name_context: &NameContext) -> Self {
         let mut classes = HashMap::new();
         let mut class_type_by_name = HashMap::new();
         let mut names_by_class_type: HashMap<ClassType, Vec<Name>> = HashMap::new();
 
-        for (&name, resource) in &bigfile.resources {
-            let header = BffResourceHeader {
-                platform: bigfile.manifest.platform,
-                version: bigfile.manifest.version.clone(),
-            };
-
-            let Ok(class) = <&Resource as TryIntoVersionPlatform<Class>>::try_into_version_platform(
-                resource,
-                bigfile.manifest.version.clone(),
-                bigfile.manifest.platform,
-            ) else {
+        for bff_resource in bigfile.bff_resources() {
+            let name = bff_resource.resource.name;
+            let Ok(bff_class) = bff_resource.bff_class(name_context) else {
                 continue;
             };
 
-            let class_type = class.class_type();
+            let class_type = bff_class.class.class_type();
 
             class_type_by_name.insert(name, class_type);
             names_by_class_type
                 .entry(class_type)
                 .or_default()
                 .push(name);
-            classes.insert(name, BffClass { header, class });
+            classes.insert(name, bff_class);
         }
 
         let dependencies = DependencyIndex::from_references(

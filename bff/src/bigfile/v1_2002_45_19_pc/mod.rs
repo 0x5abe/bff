@@ -5,7 +5,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use binrw::{BinRead, BinResult, BinWrite, Endian};
+use binrw::{BinRead as _, BinResult, BinWrite as _, Endian};
 use block::*;
 use header::*;
 
@@ -34,6 +34,7 @@ pub fn blocks_parser(
     for block_description in block_descriptions {
         let block = Block::read_options(reader, endian, (&block_description,))?;
         let mut block_resources = Vec::with_capacity(block.resources.len());
+        resources.reserve(block.resources.len());
         for resource in block.resources.into_iter() {
             block_resources.push(ManifestResource {
                 name: resource.name,

@@ -22,7 +22,7 @@ pub enum CollisionFacesRange {
 pub struct AABBNode {
     min: Vec3f,
     #[br(map = |x: (u16, u16)| (x != (0, 0)).then(|| (x.0 - 1, x.1 - 1)))]
-    #[bw(map = |x: &Option<(u16, u16)>| x.map(|x| (x.0 + 1, x.1 + 1)).unwrap_or((0, 0)))]
+    #[bw(map = |x| x.as_ref().map(|x| (x.0 + 1, x.1 + 1)).unwrap_or((0, 0)))]
     #[serde(skip_serializing_if = "Option::is_none")]
     collision_aabb_children: Option<(u16, u16)>,
     max: Vec3f,
@@ -128,7 +128,7 @@ pub enum Vertices {
 }
 
 impl Vertices {
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         match self {
             Self::LayoutPosition(layout_positions) => layout_positions.len(),
             Self::LayoutPositionUV(layout_position_uvs) => layout_position_uvs.len(),
@@ -139,7 +139,7 @@ impl Vertices {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         match self {
             Self::LayoutPosition(layout_positions) => layout_positions.is_empty(),
             Self::LayoutPositionUV(layout_position_uvs) => layout_position_uvs.is_empty(),
@@ -150,7 +150,7 @@ impl Vertices {
         }
     }
 
-    pub fn layout(&self) -> usize {
+    pub const fn layout(&self) -> usize {
         match self {
             Self::LayoutPosition(_) => LayoutPosition::SIZE,
             Self::LayoutPositionUV(_) => LayoutPositionUV::SIZE,
