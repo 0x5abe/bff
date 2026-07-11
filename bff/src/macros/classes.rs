@@ -3,7 +3,7 @@ macro_rules! classes {
         $(
             $class:ident
             $({
-                $($pattern:pat => $variant_mod:ident::$variant:ident),+ $(,)?
+                $($(( $version_pattern:pat_param, $platform_pattern:tt ))|+ => $variant_mod:ident::$variant:ident),+ $(,)?
                 $(; $(pub mod $extra_mod:ident;)*)?
             })?
             ,
@@ -13,7 +13,7 @@ macro_rules! classes {
             $crate::macros::classes::classes!(@module
                 $class
                 $({
-                    $($pattern => $variant_mod::$variant),+
+                    $($(( $version_pattern, $platform_pattern ))|+ => $variant_mod::$variant),+
                     $(; $(pub mod $extra_mod;)*)?
                 })?
             );
@@ -184,7 +184,7 @@ macro_rules! classes {
             }
         }
     };
-    (@module $class:ident { $($pattern:pat => $variant_mod:ident::$variant:ident),+ $(,)? $(; $(pub mod $extra_mod:ident;)*)? }) => {
+    (@module $class:ident { $($(( $version_pattern:pat_param, $platform_pattern:tt ))|+ => $variant_mod:ident::$variant:ident),+ $(,)? $(; $(pub mod $extra_mod:ident;)*)? }) => {
         pastey::paste! {
             pub mod [<#$class:snake>] {
                 $(
@@ -196,7 +196,7 @@ macro_rules! classes {
                     pub mod $variant_mod;
                     use self::$variant_mod::$variant;
                 )*
-                $crate::macros::classes::classes!(@declare_class_kind_impl $class { $($pattern => $variant),* });
+                $crate::macros::classes::classes!(@declare_class_kind_impl $class { $($(( $version_pattern, $platform_pattern ))|+ => $variant),* });
             }
         }
     };
@@ -255,7 +255,14 @@ macro_rules! classes {
 
     };
 
-    (@declare_class_kind_impl $class:ident { $($pattern:pat => $variant:ident),* $(,)? }) => {
+    (@platform_pattern _) => {
+        _
+    };
+    (@platform_pattern $platform:ident) => {
+        crate::bigfile::platforms::Platform::$platform
+    };
+
+    (@declare_class_kind_impl $class:ident { $($(( $version_pattern:pat_param, $platform_pattern:tt ))|+ => $variant:ident),* $(,)? }) => {
         #[derive(serde::Serialize, serde::Deserialize, Debug, derive_more::From, derive_more::IsVariant, bff_derive::ReferencedNames, schemars::JsonSchema)]
         pub enum $class {
             $($variant(std::boxed::Box<$variant>)),*
@@ -278,17 +285,15 @@ macro_rules! classes {
         }
 
         impl crate::traits::FromResource for $class {
-            #[expect(unused_imports)]
             fn from_resource(
                 resource: &crate::bigfile::resource::Resource,
                 version: &crate::bigfile::versions::Version,
                 platform: crate::bigfile::platforms::Platform,
                 name_context: &crate::names::NameContext,
             ) -> crate::BffResult<$class> {
-                use crate::bigfile::platforms::Platform::*;
                 use crate::bigfile::versions::Version::*;
                 match (version.clone(), platform) {
-                    $($pattern => {
+                    $($(($version_pattern, $crate::macros::classes::classes!(@platform_pattern $platform_pattern)))|+ => {
                         let shadow_class: $variant = <$variant as crate::traits::FromResource>::from_resource(resource, version, platform, name_context)?;
                         Ok(std::boxed::Box::new(shadow_class).into())
                     })*
@@ -300,15 +305,12 @@ macro_rules! classes {
         }
 
         impl crate::traits::ToResource for $class {
-            #[expect(unused_imports)]
             fn to_resource(
                 &self,
                 version: &crate::bigfile::versions::Version,
                 platform: crate::bigfile::platforms::Platform,
                 name_context: &crate::names::NameContext,
             ) -> crate::BffResult<crate::bigfile::resource::Resource> {
-                use crate::bigfile::platforms::Platform::*;
-                use crate::bigfile::versions::Version::*;
                 match self {
                     $($class::$variant(class) => {
                         <$variant as crate::traits::ToResource>::to_resource(class, version, platform, name_context)
