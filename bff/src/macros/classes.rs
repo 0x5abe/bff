@@ -278,7 +278,7 @@ macro_rules! classes {
         }
 
         impl crate::traits::FromResource for $class {
-            #[allow(unused_imports)]
+            #[expect(unused_imports)]
             fn from_resource(
                 resource: &crate::bigfile::resource::Resource,
                 version: &crate::bigfile::versions::Version,
@@ -300,7 +300,7 @@ macro_rules! classes {
         }
 
         impl crate::traits::ToResource for $class {
-            #[allow(unused_imports)]
+            #[expect(unused_imports)]
             fn to_resource(
                 &self,
                 version: &crate::bigfile::versions::Version,
