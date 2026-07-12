@@ -34,6 +34,12 @@ pub enum ExportStrategy {
     Source,
 }
 
+pub struct ExportOptions<'a> {
+    pub strategy: ExportStrategy,
+    pub rich_suffix: &'a str,
+    pub debug_rich_errors: bool,
+}
+
 const INVALID_PATH_CHARS: [u8; 41] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 34, 42, 47, 58, 60, 62, 63, 92, 124,
@@ -171,8 +177,7 @@ pub fn extract(
     in_names: &[PathBuf],
     platform_override: Option<Platform>,
     version_override: Option<&Version>,
-    export_strategy: ExportStrategy,
-    rich_suffix: &str,
+    export_options: ExportOptions<'_>,
 ) -> BffCliResult<()> {
     let mut name_context =
         probe_bigfile_name_context(bigfile_path, platform_override, version_override)?;
@@ -189,7 +194,7 @@ pub fn extract(
         &name_context,
     )?;
 
-    let source_project = match export_strategy {
+    let source_project = match export_options.strategy {
         ExportStrategy::Source => {
             progress_bar.set_message("Building source project");
             Some(SourceProject::from_bigfile(&bigfile, &name_context))
@@ -243,10 +248,40 @@ pub fn extract(
                 return Ok(());
             }
 
-            if matches!(export_strategy, ExportStrategy::Binary)
-                || export_bff_resource(&resources_path, &bff_resource, &name_context, rich_suffix)
-                    .is_err()
-            {
+            let rich_export_failed = if matches!(export_options.strategy, ExportStrategy::Binary) {
+                false
+            } else {
+                match export_bff_resource(
+                    &resources_path,
+                    &bff_resource,
+                    &name_context,
+                    export_options.rich_suffix,
+                ) {
+                    Ok(()) => false,
+                    Err(error) => {
+                        if export_options.debug_rich_errors {
+                            let resource_name = bff_resource
+                                .resource
+                                .name
+                                .with_context(&name_context)
+                                .to_string();
+                            let class_name = bff_resource
+                                .resource
+                                .class_name
+                                .with_context(&name_context)
+                                .to_string();
+                            progress_bar.suspend(|| {
+                                eprintln!(
+                                    "Rich export failed for {resource_name}.{class_name}: {error:#?}"
+                                );
+                            });
+                        }
+                        true
+                    }
+                }
+            };
+
+            if matches!(export_options.strategy, ExportStrategy::Binary) || rich_export_failed {
                 dump_bff_resource(&resources_path, &bff_resource, &name_context)?;
             }
 

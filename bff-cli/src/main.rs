@@ -7,7 +7,7 @@ use clap::*;
 use crc::{CrcAlgorithm, CrcFormat, CrcMode};
 use crypt::CryptAlgorithm;
 use error::BffCliResult;
-use extract::ExportStrategy;
+use extract::{ExportOptions, ExportStrategy};
 use lz::LzEndian;
 
 use crate::lz::LzAlgorithm;
@@ -60,6 +60,8 @@ enum Commands {
         export_strategy: ExportStrategy,
         #[arg(long, default_value_t = String::from(".d"))]
         rich_suffix: String,
+        #[arg(long)]
+        debug_rich_errors: bool,
     },
     #[clap(alias = "c")]
     Create {
@@ -284,14 +286,18 @@ fn main() -> BffCliResult<()> {
             version_override,
             export_strategy,
             rich_suffix,
+            debug_rich_errors,
         } => extract::extract(
             &bigfile,
             &directory,
             &in_names,
             platform_override,
             version_override.as_ref(),
-            export_strategy,
-            &rich_suffix,
+            ExportOptions {
+                strategy: export_strategy,
+                rich_suffix: &rich_suffix,
+                debug_rich_errors,
+            },
         ),
         Commands::Create {
             directory,
