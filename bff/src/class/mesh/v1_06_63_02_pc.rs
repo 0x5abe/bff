@@ -8,80 +8,11 @@ use serde::de::Error as _;
 use serde::ser::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::shared::{AABBNode, Strip};
+use super::v1_06_63_0x::MeshBodyV1_06_63_0X;
 use crate::class::trivial_class::TrivialClass;
-use crate::helpers::{
-    BffBox,
-    Cylindre,
-    DynArray,
-    ObjectLinkHeaderV1_06_63_02PC,
-    Sphere,
-    Vec2f,
-    Vec3f,
-    Vec3i16,
-};
+use crate::helpers::{DynArray, ObjectLinkHeaderV1_06_63_02PC, Vec2f, Vec3f};
 use crate::names::Name;
 use crate::traits::{Export, Import};
-
-#[derive(..BffStruct)]
-struct TBVtx {
-    tangent: Vec3f,
-    handedness: f32, // 1.0f or -1.0f
-}
-
-#[derive(..BffStruct)]
-struct MorphValue {
-    displacement: Vec3f,
-    self_idx: u16,
-    pad: u16,
-}
-
-#[derive(..BffStruct)]
-struct MorphTargetDesc {
-    name: Name,
-    morph_values: DynArray<MorphValue>,
-}
-
-#[derive(..BffStruct)]
-struct Morpher {
-    morph_values: DynArray<MorphValue>,
-    morph_target_descs: DynArray<MorphTargetDesc>,
-}
-
-#[derive(..BffStruct)]
-struct SphereCol {
-    col_sph: Sphere,
-    flag: u32,
-    name: Name,
-}
-
-#[derive(..BffStruct)]
-struct BoxCol {
-    col_box: BffBox,
-    flag: u32,
-    name: Name,
-}
-
-#[derive(..BffStruct)]
-struct CylindreCol {
-    col_cylindre: Cylindre,
-    flag: u32,
-    name: Name,
-}
-
-#[derive(..BffStruct)]
-struct FaceCol {
-    first_vertex_id: i16,
-    second_vertex_id: i16,
-    third_vertex_id: i16,
-    material_index: i16,
-}
-
-#[derive(..BffStruct)]
-struct AABBCol {
-    collision_faces: DynArray<FaceCol>,
-    collision_aabb_nodes: DynArray<AABBNode>,
-}
 
 #[derive(..BffStruct, Clone)]
 struct PrimitiveInfo {
@@ -98,27 +29,7 @@ struct PrimitiveInfo {
     start_vertex: u16,
     vertex_stride: u16,
     cdcdcdcd: u32,
-}
-
-#[derive(..BffStruct)]
-struct Points {
-    positions: DynArray<Vec3f>,
-    tangent_binormal_vertices: DynArray<TBVtx>,
-    morpher: Morpher,
-}
-
-#[derive(..BffStruct)]
-struct Vtx {
-    uv_idx: u16,
-    normal_idx: u16,
-    color_idx: u16,
-    vertices_idx: u16,
-}
-
-#[derive(..BffStruct)]
-struct StripExt {
-    vertices: DynArray<Vtx>,
-}
+} // source: The stuff here is all baked, so we won't need this in the source format at all in this form, we'll use it to extract the data to the lists we talked about.
 
 #[derive(BinRead, BinWrite, Debug)]
 struct MeshBuffers {
@@ -264,7 +175,7 @@ enum MeshVertexBuffer {
     Skin4Blend(Vec<VertexLayoutSkin4Blend>),
     Morph1Blend(Vec<VertexLayoutMorph1Blend>),
     Morph4Blend(Vec<VertexLayoutMorph4Blend>),
-}
+} // source: In terms of the different formats, we'll have to see how to unbake each one depending on what data we have. But really all of them can be boiled down to at least position + normals. There's extra stuff in some of them like uvs, luvs, tangents, but extract what can be. I'm pretty sure tangents can be calculated from normals, but maybe I'm wrong and we need those in the source format. 
 
 impl MeshVertexBuffer {
     const fn layout(&self) -> u16 {
@@ -615,27 +526,12 @@ struct IndexBufferExt {
 #[derive(..BffStruct)]
 #[br(import(link_header: &ObjectLinkHeaderV1_06_63_02PC))]
 pub struct MeshBodyV1_06_63_02PC {
-    points: Points,
-    uvs: DynArray<u32>,
-    normals: DynArray<Vec3f>,
-    strips: DynArray<Strip>,
-    #[br(if(link_header.flags & 2 >= 1))]
-    #[br(count = strips.len())]
-    strip_override_material_indices: Option<Vec<u32>>,
-    strip_exts: DynArray<StripExt>,
-    material_names: DynArray<Name>,
-    drawing_start_distance: f32,
-    drawing_cutoff_distance: f32,
-    shadow_related: u32,
-    related_to_counts: [u32; 3],
-    sphere_cols: DynArray<SphereCol>,
-    box_cols: DynArray<BoxCol>,
-    cylindre_cols: DynArray<CylindreCol>,
-    aabb_col: AABBCol,
-    aabb_col_vertices: DynArray<Vec3i16>,
-    unknown0: DynArray<u32>,
-    primitive_info_indices: DynArray<u32>,
-    mesh_buffers: MeshBuffers,
+    #[br(args(link_header))]
+    #[serde(flatten)]
+    shared: MeshBodyV1_06_63_0X,
+    unknown0: DynArray<u32>,               // source: not used, doesn't have
+    primitive_info_indices: DynArray<u32>, // source: this can be baked, it seems to always be the same length as primitive infos, and just maps its own index ([0]=0, [1]=1, [2]=2, etc). So we can just bake it, doesnt have to be in the source format
+    mesh_buffers: MeshBuffers, // source: we'll use this to get the relevant data for faces, vertices, normals, uvs, etc. The baked data is in here, so we can use it to get the source data for the mesh. Note that there are also lightmap uvs, and weights, we have to see what we'll do with lightmap uvs cause I think they might be the same as normal uvs. Weights will be used later in the skinned mesh path, but that will be leaded by the Skin source class, so for now we can ignore them. The main thing is to get the source data for the mesh, and then later we can implement the skinned mesh path.
 }
 
 pub type MeshV1_06_63_02PC = TrivialClass<ObjectLinkHeaderV1_06_63_02PC, MeshBodyV1_06_63_02PC>;

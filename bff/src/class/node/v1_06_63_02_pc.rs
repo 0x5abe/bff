@@ -17,9 +17,9 @@ use crate::helpers::{
     Vec3f,
 };
 use crate::names::Name;
-use crate::source::classes::node::{NodeFlag, NodeFlags, NodeSourcePart, NodeSourceParts};
+use crate::source::classes::node::{NodeFlag, NodeFlags, NodeSourcePart, NodeSourcePartBuild};
 use crate::source::flags::{FlagMapping, decode_flags};
-use crate::source::part::Named;
+use crate::source::part::{Named, SourcePartBuild};
 use crate::traits::{Export, Import};
 
 #[bitsize(32)]
@@ -100,7 +100,7 @@ pub type NodeV1_06_63_02PC =
 impl Export for NodeV1_06_63_02PC {}
 impl Import for NodeV1_06_63_02PC {}
 
-impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
+impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourcePartBuild {
     type Error = Error;
 
     fn try_from(named: Named<'_, NodeV1_06_63_02PC>) -> Result<Self, Self::Error> {
@@ -111,7 +111,7 @@ impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
             (!body.radiosity_bitmap_name.is_default()).then_some(body.radiosity_bitmap_name);
 
         Ok(Self {
-            node: NodeSourcePart {
+            node: SourcePartBuild::new(named.name, NodeSourcePart {
                 head_child_name: body.head_child_name,
                 next_node_name: body.next_node_name,
                 object_name: body.object_name,
@@ -125,10 +125,8 @@ impl TryFrom<Named<'_, NodeV1_06_63_02PC>> for NodeSourceParts {
                 color: body.color,
                 start: body.start,
                 end: body.end,
-            },
+            }),
             user_define_name,
-            represented_resources: vec![named.name],
-            preserved: Vec::new(),
         })
     }
 }

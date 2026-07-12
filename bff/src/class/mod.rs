@@ -122,11 +122,13 @@ classes! {
     },
     MenuMasterMenu,
     Mesh {
+        (Asobo(1, 6, 63, 1), GameCube) => v1_06_63_01_gc::MeshV1_06_63_01GC,
         (Asobo(1, 6, 63, 2), PC) => v1_06_63_02_pc::MeshV1_06_63_02PC,
         (Asobo(1, 291, 3, 6), PC) => v1_291_03_06_pc::MeshV1_291_03_06PC,
         (Asobo(1, 381, 67, 9), PC) => v1_381_67_09_pc::MeshV1_381_67_09PC,
         ;
         pub mod shared;
+        pub mod v1_06_63_0x;
     },
     MeshData {
         (Asobo(1, 6, 63, _), _) => v1_06_63_02_pc::MeshDataV1_06_63_02PC,

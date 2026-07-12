@@ -22,11 +22,11 @@ use crate::source::classes::node::{
     AnimFramePlayFlag,
     AnimFramePlayFlags as SourceAnimFramePlayFlags,
     AnimFrameSourcePart,
-    AnimFrameSourceParts,
+    AnimFrameSourcePartBuild,
 };
 use crate::source::flags::{FlagMapping, decode_flags};
 use crate::source::keyframer::ToSourceTrack as _;
-use crate::source::part::Named;
+use crate::source::part::{Named, SourcePartBuild};
 use crate::traits::{Export, Import};
 
 #[bitsize(16)]
@@ -73,14 +73,14 @@ pub type AnimFrameV1_06_63_02PC =
 impl Export for AnimFrameV1_06_63_02PC {}
 impl Import for AnimFrameV1_06_63_02PC {}
 
-impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourceParts {
+impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourcePartBuild {
     type Error = Error;
 
     fn try_from(named: Named<'_, AnimFrameV1_06_63_02PC>) -> Result<Self, Self::Error> {
         let body = &named.value.body;
 
         Ok(Self {
-            anim_frame: AnimFrameSourcePart {
+            anim_frame: SourcePartBuild::new(named.name, AnimFrameSourcePart {
                 name: named.name,
                 duration: body.duration,
                 play_flags: SourceAnimFramePlayFlags {
@@ -98,10 +98,8 @@ impl TryFrom<Named<'_, AnimFrameV1_06_63_02PC>> for AnimFrameSourceParts {
                 messages: source_message_track(&body.msg_keyframer, source_message_v1_06_63_02_pc),
                 follow: body.follow_keyframer.to_source_track()?,
                 start_stop: body.start_stop_keyframer.to_source_track()?,
-            },
+            }),
             animated_node_name: body.animated_node_name,
-            represented_resources: vec![named.name],
-            preserved: Vec::new(),
         })
     }
 }

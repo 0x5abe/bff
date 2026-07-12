@@ -17,8 +17,6 @@ pub mod versions;
 
 use std::collections::HashMap;
 
-use petgraph::Graph;
-
 use crate::bigfile::dependency::DependencyIndex;
 use crate::bigfile::manifest::Manifest;
 use crate::bigfile::resource::Resource;
@@ -97,10 +95,6 @@ impl BigFile {
                 .unwrap_or_default();
             (name, references)
         }))
-    }
-
-    pub fn reference_graph(&self, name_context: &NameContext) -> Graph<Name, ()> {
-        self.dependency_index(name_context).to_graph()
     }
 
     pub fn probe_name_type_platform<R: std::io::Read + std::io::Seek>(

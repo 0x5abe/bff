@@ -16,8 +16,7 @@ use crate::source::keyframer::{
     StartStopTrack,
 };
 use crate::source::message::SourceMessageTrack;
-use crate::source::part::{SourcePart, ToSourcePart as _};
-use crate::source::preservation::PreservedFragment;
+use crate::source::part::{SourcePart, SourcePartBuild, ToSourcePart as _};
 use crate::source::project::CookedProject;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -32,9 +31,9 @@ impl NodeSource {
         name: Name,
         ctx: &mut UncookContext,
     ) -> BffResult<SourceAssetBuild<Self>> {
-        let node_parts = ctx.require_part::<NodeSourceParts>(&name)?;
-        let mut represented_resources = node_parts.represented_resources;
-        let mut preserved = node_parts.preserved;
+        let node_parts = ctx.require_part::<NodeSourcePartBuild>(&name)?;
+        let mut represented_resources = node_parts.node.represented_resources;
+        let mut preserved = node_parts.node.preserved;
 
         let user_define = node_parts
             .user_define_name
@@ -46,14 +45,15 @@ impl NodeSource {
 
         let mut anim_frames = Vec::new();
         for anim_frame_name in ctx.project().incoming_of_type(&name, ClassType::AnimFrame) {
-            let anim_frame_parts = ctx.require_part::<AnimFrameSourceParts>(&anim_frame_name)?;
+            let anim_frame_parts =
+                ctx.require_part::<AnimFrameSourcePartBuild>(&anim_frame_name)?;
             if anim_frame_parts.animated_node_name != name {
                 continue;
             }
 
-            represented_resources.extend(anim_frame_parts.represented_resources);
-            preserved.extend(anim_frame_parts.preserved);
-            anim_frames.push(anim_frame_parts.anim_frame);
+            represented_resources.extend(anim_frame_parts.anim_frame.represented_resources);
+            preserved.extend(anim_frame_parts.anim_frame.preserved);
+            anim_frames.push(anim_frame_parts.anim_frame.part);
         }
 
         for represented_resource in represented_resources {
@@ -63,7 +63,7 @@ impl NodeSource {
         Ok(SourceAssetBuild {
             name,
             asset: Self {
-                node: node_parts.node,
+                node: node_parts.node.part,
                 user_define,
                 anim_frames,
             },
@@ -142,14 +142,12 @@ pub struct NodeSourcePart {
     pub end: f32,
 }
 
-pub(crate) struct NodeSourceParts {
-    pub node: NodeSourcePart,
+pub struct NodeSourcePartBuild {
+    pub node: SourcePartBuild<NodeSourcePart>,
     pub user_define_name: Option<Name>,
-    pub represented_resources: Vec<Name>,
-    pub preserved: Vec<PreservedFragment>,
 }
 
-impl SourcePart for NodeSourceParts {
+impl SourcePart for NodeSourcePartBuild {
     fn from_project(name: &Name, project: &CookedProject) -> BffResult<Self> {
         let bff_class = project
             .class(name)
@@ -170,7 +168,7 @@ impl SourcePart for NodeSourceParts {
 
 impl SourcePart for NodeSourcePart {
     fn from_project(name: &Name, project: &CookedProject) -> BffResult<Self> {
-        Ok(NodeSourceParts::from_project(name, project)?.node)
+        Ok(NodeSourcePartBuild::from_project(name, project)?.node.part)
     }
 }
 
@@ -209,14 +207,12 @@ pub struct AnimFramePlayFlags {
     pub flags: Vec<AnimFramePlayFlag>,
 }
 
-pub(crate) struct AnimFrameSourceParts {
-    pub anim_frame: AnimFrameSourcePart,
+pub struct AnimFrameSourcePartBuild {
+    pub anim_frame: SourcePartBuild<AnimFrameSourcePart>,
     pub animated_node_name: Name,
-    pub represented_resources: Vec<Name>,
-    pub preserved: Vec<PreservedFragment>,
 }
 
-impl SourcePart for AnimFrameSourceParts {
+impl SourcePart for AnimFrameSourcePartBuild {
     fn from_project(name: &Name, project: &CookedProject) -> BffResult<Self> {
         let bff_class = project
             .class(name)
@@ -237,6 +233,8 @@ impl SourcePart for AnimFrameSourceParts {
 
 impl SourcePart for AnimFrameSourcePart {
     fn from_project(name: &Name, project: &CookedProject) -> BffResult<Self> {
-        Ok(AnimFrameSourceParts::from_project(name, project)?.anim_frame)
+        Ok(AnimFrameSourcePartBuild::from_project(name, project)?
+            .anim_frame
+            .part)
     }
 }
